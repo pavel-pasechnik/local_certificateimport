@@ -36,9 +36,9 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
     }
 
-    if ($oldversion < 2025111201) {
+    if ($oldversion < 2025111200) {
         // Capability definition and import workflow refinements.
-        upgrade_plugin_savepoint(true, 2025111201, 'local', 'certificateimport');
+        upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
     }
 
     return true;
