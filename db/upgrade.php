@@ -55,12 +55,12 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
     }
 
-    if ($oldversion < 2025111202) {
+    if ($oldversion < 2025111200) {
         // Reserved for observer/original-file storage upgrade.
-        upgrade_plugin_savepoint(true, 2025111202, 'local', 'certificateimport');
+        upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
     }
 
-    if ($oldversion < 2025111203) {
+    if ($oldversion < 2025111200) {
         $table = new xmldb_table('local_certificateimport_log');
         if ($dbman->table_exists($table)) {
             $dbman->drop_table($table);
@@ -70,7 +70,7 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
         $systemcontext = context_system::instance();
         $fs->delete_area_files($systemcontext->id, 'local_certificateimport', 'originals');
 
-        upgrade_plugin_savepoint(true, 2025111203, 'local', 'certificateimport');
+        upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
     }
 
     return true;
