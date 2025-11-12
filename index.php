@@ -91,6 +91,13 @@ echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('pagetitle', 'local_certificateimport'));
 echo html_writer::div(get_string('page:instructions', 'local_certificateimport'), 'alert alert-info');
 
+if (!local_certificateimport_is_available()) {
+    echo $OUTPUT->notification(
+        get_string('status:unavailable:details', 'local_certificateimport'),
+        \core\output\notification::NOTIFY_WARNING
+    );
+}
+
 $templateurl = new moodle_url('/local/certificateimport/template.php');
 $templatelink = html_writer::link($templateurl, get_string('page:csvtemplate', 'local_certificateimport'), [
     'class' => 'btn btn-secondary',

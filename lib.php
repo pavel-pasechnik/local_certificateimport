@@ -364,9 +364,57 @@ function local_certificateimport_normalize_time($value): ?int {
 
     if (is_numeric($value)) {
         $timestamp = (int)$value;
-    } else {
-        $timestamp = strtotime($value);
+        return $timestamp > 0 ? $timestamp : null;
     }
 
-    return $timestamp && $timestamp > 0 ? $timestamp : null;
+    $timestamp = strtotime($value);
+    if ($timestamp && $timestamp > 0) {
+        return $timestamp;
+    }
+
+    $formats = [
+        'd.m.Y H:i:s',
+        'd.m.Y H:i',
+        'd.m.Y',
+        'd/m/Y H:i:s',
+        'd/m/Y H:i',
+        'd/m/Y',
+        'Y-m-d H:i:s',
+        'Y-m-d H:i',
+        'Y-m-d',
+        'Y/m/d H:i:s',
+        'Y/m/d H:i',
+        'Y/m/d',
+    ];
+
+    $timezone = new DateTimeZone(date_default_timezone_get());
+    foreach ($formats as $format) {
+        $datetime = DateTime::createFromFormat($format, $value, $timezone);
+        if ($datetime instanceof DateTime) {
+            $errors = DateTime::getLastErrors();
+            if (empty($errors['warning_count']) && empty($errors['error_count'])) {
+                return $datetime->getTimestamp();
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Checks whether the plugin can operate (dependencies present, tables exist).
+ *
+ * @return bool
+ */
+function local_certificateimport_is_available(): bool {
+    global $DB;
+
+    $plugindir = core_component::get_plugin_directory('tool', 'certificate');
+    if (!$plugindir || !file_exists($plugindir . '/version.php')) {
+        return false;
+    }
+
+    $dbman = $DB->get_manager();
+    return $dbman->table_exists('tool_certificate_templates')
+        && $dbman->table_exists('tool_certificate_issues');
 }

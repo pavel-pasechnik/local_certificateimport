@@ -29,9 +29,8 @@ $string['pagetitle'] = 'Імпорт CSV/ZIP сертифікатів';
 $string['page:instructions'] = 'Завантажте CSV у форматі <code>userid,templateid,code,filename,timecreated</code> та ZIP з PDF-файлами, імена яких збігаються зі стовпцем <code>filename</code>. Після імпорту перевіряйте видані сертифікати через <code>tool/certificate/index.php</code>. Нижче доступний готовий шаблон CSV.';
 $string['page:csvtemplate'] = 'Завантажити шаблон CSV';
 
-$string['form:header'] = 'Вхідні файли';
 $string['form:csvfile'] = 'Файл CSV';
-$string['form:csvfile_help'] = 'CSV повинен містити стовпці: userid, templateid, code, filename, timecreated.';
+$string['form:csvfile_help'] = 'CSV повинен містити стовпці: userid, templateid, code, filename, timecreated. Стовпець timecreated може містити UNIX-мітку часу або звичну дату (YYYY-MM-DD, DD.MM.YYYY тощо).';
 $string['form:zipfile'] = 'ZIP-архів з PDF';
 $string['form:zipfile_help'] = 'Назви PDF мають збігатися зі значенням у стовпці <code>filename</code>.';
 $string['form:submit'] = 'Імпортувати сертифікати';
@@ -62,6 +61,10 @@ $string['error:pdfextension'] = 'Можна імпортувати лише PDF 
 $string['error:zipopen'] = 'Не вдалося відкрити ZIP-архів (код помилки {$a}).';
 $string['error:zipextract'] = 'Не вдалося розпакувати файли з ZIP-архіву.';
 $string['error:unexpected'] = 'Неочікувана помилка: {$a}';
+
+$string['status:available'] = 'Доступний';
+$string['status:unavailable'] = 'Недоступний';
+$string['status:unavailable:details'] = 'Імпорт вимкнено, доки не буде встановлено та увімкнено офіційний плагін Certificate (tool_certificate) і його таблиці в базі даних.';
 
 $string['privacy:metadata'] = 'Плагін не зберігає персональні дані поза стандартними таблицями tool_certificate.';
 $string['certificateimport:import'] = 'Імпортувати PDF сертифікати';

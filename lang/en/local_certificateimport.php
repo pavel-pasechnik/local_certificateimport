@@ -29,9 +29,8 @@ $string['pagetitle'] = 'CSV/ZIP certificate import';
 $string['page:instructions'] = 'Upload a CSV file in the format <code>userid,templateid,code,filename,timecreated</code> and a ZIP file that contains all PDF certificates. After the import you can verify the entries via <code>tool/certificate/index.php</code>. Use the download link below if you need a ready-made CSV template.';
 $string['page:csvtemplate'] = 'Download CSV template';
 
-$string['form:header'] = 'Source files';
 $string['form:csvfile'] = 'CSV file';
-$string['form:csvfile_help'] = 'The CSV must contain the columns: userid, templateid, code, filename, timecreated.';
+$string['form:csvfile_help'] = 'The CSV must contain the columns: userid, templateid, code, filename, timecreated. The timecreated column may contain a UNIX timestamp or a readable date (YYYY-MM-DD, DD.MM.YYYY, etc.).';
 $string['form:zipfile'] = 'ZIP archive with PDFs';
 $string['form:zipfile_help'] = 'PDF filenames have to match the <code>filename</code> column in the CSV.';
 $string['form:submit'] = 'Import certificates';
@@ -62,6 +61,10 @@ $string['error:pdfextension'] = 'Only PDF files can be imported (value "{$a}").'
 $string['error:zipopen'] = 'Unable to open the ZIP archive (error code {$a}).';
 $string['error:zipextract'] = 'Unable to extract files from the ZIP archive.';
 $string['error:unexpected'] = 'Unexpected error: {$a}';
+
+$string['status:available'] = 'Available';
+$string['status:unavailable'] = 'Unavailable';
+$string['status:unavailable:details'] = 'The importer is disabled until the official Certificate tool (tool_certificate) is installed and its database tables are present.';
 
 $string['privacy:metadata'] = 'The plugin does not store personal data beyond the standard tool_certificate tables.';
 $string['certificateimport:import'] = 'Import certificate PDF files';

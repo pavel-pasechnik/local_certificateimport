@@ -11,6 +11,7 @@
 ## Features
 
 - 📤 Upload a CSV file (`userid,templateid,code,filename,timecreated`) and a ZIP archive with PDF certificates.
+- 📝 One-click CSV template download so column order and sample data are ready.
 - 📁 Automatically extracts PDFs, creates missing records in `tool_certificate_issues`, and stores files via the Moodle file API.
 - 🔁 Idempotent: updates existing issues (code/time) and replaces stored PDFs when needed.
 - 📊 Generates an import report showing *User → Code → Status* with “Imported / File not found / Error”.
@@ -30,10 +31,11 @@ The plugin requires Moodle 4.5 (2024041900) or newer and the official `tool_cert
 
 ## Usage
 
-1. Navigate to **Site administration → Local plugins → Certificate PDF import** (or open `/local/certificateimport/index.php`).
+1. Navigate to **Site administration → Certificates → Certificate PDF import** (or open `/local/certificateimport/index.php`).
 2. Upload:
    - CSV file: UTF‑8, comma separator, header optional, columns → `userid,templateid,code,filename,timecreated`.
    - ZIP archive: contains every PDF referenced in the CSV `filename` column.
+   - Need a sample? Use the **Download CSV template** button on the page.
 3. Click **Import certificates**.
 4. Review the report. You can cross-check results via `tool/certificate/index.php`.
 
@@ -45,7 +47,7 @@ The plugin requires Moodle 4.5 (2024041900) or newer and the official `tool_cert
 | `templateid`| ID of the certificate template (`tool_certificate_templates`).|
 | `code`      | Primary code shown on the certificate (max 40 chars).         |
 | `filename`  | PDF filename inside the ZIP archive.                          |
-| `timecreated` | Optional UNIX timestamp or parsable date string.            |
+| `timecreated` | Optional UNIX timestamp or date string (e.g. `2025-05-31`, `31.05.2025`). |
 
 ### ZIP tips
 
@@ -80,4 +82,3 @@ Contributions and issues are welcome!
 ## License
 
 GNU GPL v3 © 2025 Pavel Pasechnik
-

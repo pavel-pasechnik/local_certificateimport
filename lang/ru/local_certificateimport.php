@@ -29,9 +29,8 @@ $string['pagetitle'] = 'Импорт CSV/ZIP сертификатов';
 $string['page:instructions'] = 'Загрузите CSV в формате <code>userid,templateid,code,filename,timecreated</code> и ZIP с PDF-файлами, где имена совпадают с колонкой <code>filename</code>. После импорта проверяйте выдачи через <code>tool/certificate/index.php</code>. Ниже можно скачать готовый шаблон CSV.';
 $string['page:csvtemplate'] = 'Скачать шаблон CSV';
 
-$string['form:header'] = 'Входные файлы';
 $string['form:csvfile'] = 'CSV-файл';
-$string['form:csvfile_help'] = 'CSV должен содержать столбцы: userid, templateid, code, filename, timecreated.';
+$string['form:csvfile_help'] = 'CSV должен содержать столбцы: userid, templateid, code, filename, timecreated. Колонка timecreated может содержать UNIX-метку времени или обычную дату (YYYY-MM-DD, DD.MM.YYYY и т. п.).';
 $string['form:zipfile'] = 'ZIP-архив с PDF';
 $string['form:zipfile_help'] = 'Имена PDF-файлов должны совпадать со значением в колонке <code>filename</code>.';
 $string['form:submit'] = 'Импортировать сертификаты';
@@ -62,6 +61,10 @@ $string['error:pdfextension'] = 'Можно импортировать толь�
 $string['error:zipopen'] = 'Не удалось открыть ZIP-архив (код ошибки {$a}).';
 $string['error:zipextract'] = 'Не удалось извлечь файлы из ZIP-архива.';
 $string['error:unexpected'] = 'Непредвиденная ошибка: {$a}';
+
+$string['status:available'] = 'Доступен';
+$string['status:unavailable'] = 'Недоступен';
+$string['status:unavailable:details'] = 'Импорт отключён, пока не будет установлен и включён официальный плагин Certificate (tool_certificate) и его таблицы в базе данных.';
 
 $string['privacy:metadata'] = 'Плагин не хранит персональные данные вне стандартных таблиц tool_certificate.';
 $string['certificateimport:import'] = 'Импортировать PDF сертификаты';

@@ -38,8 +38,6 @@ class import_form extends \moodleform {
     public function definition(): void {
         $mform = $this->_form;
 
-        $mform->addElement('header', 'filessection', get_string('form:header', 'local_certificateimport'));
-
         $csvoptions = [
             'accepted_types' => ['.csv'],
             'maxbytes' => 0,

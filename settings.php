@@ -24,6 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once(__DIR__ . '/lib.php');
+
 if ($hassiteconfig) {
     $category = 'certificates';
 
@@ -31,9 +33,15 @@ if ($hassiteconfig) {
         $ADMIN->add('root', new admin_category($category, get_string('pluginname', 'tool_certificate')));
     }
 
+    $statusstring = local_certificateimport_is_available()
+        ? 'status:available'
+        : 'status:unavailable';
+    $statuslabel = get_string($statusstring, 'local_certificateimport');
+    $visiblename = get_string('pluginname', 'local_certificateimport') . ' — ' . $statuslabel;
+
     $ADMIN->add($category, new admin_externalpage(
         'local_certificateimport',
-        get_string('pluginname', 'local_certificateimport'),
+        $visiblename,
         new moodle_url('/local/certificateimport/index.php'),
         'local/certificateimport:import'
     ));
