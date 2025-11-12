@@ -30,7 +30,7 @@ $context = context_system::instance();
 require_capability('local/certificateimport:import', $context);
 
 $csvcontent = "userid,templateid,code,filename,timecreated\n";
-$csvcontent .= "123,45,ABC123,sample.pdf,1735689600\n";
+$csvcontent .= "123,,,sample.pdf,1735689600\n";
 
 $filename = 'certificateimport_template.csv';
 

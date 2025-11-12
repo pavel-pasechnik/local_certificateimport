@@ -12,6 +12,8 @@
 
 - 📤 Upload a CSV file (`userid,templateid,code,filename,timecreated`) and a ZIP archive with PDF certificates.
 - 📝 One-click CSV template download so column order and sample data are ready.
+- 🎯 Pick the destination certificate template from a dropdown instead of memorising template IDs.
+- 🔢 Certificate numbers are generated automatically by the official `tool_certificate` component, so the CSV `code` column can stay empty.
 - 📁 Automatically extracts PDFs, creates missing records in `tool_certificate_issues`, and stores files via the Moodle file API.
 - 🔁 Idempotent: updates existing issues (code/time) and replaces stored PDFs when needed.
 - 📊 Generates an import report showing *User → Code → Status* with “Imported / File not found / Error”.
@@ -32,8 +34,8 @@ The plugin requires Moodle 4.5 (2024041900) or newer and the official `tool_cert
 ## Usage
 
 1. Navigate to **Site administration → Certificates → Certificate PDF import** (or open `/local/certificateimport/index.php`).
-2. Upload:
-   - CSV file: UTF‑8, comma separator, header optional, columns → `userid,templateid,code,filename,timecreated`.
+2. Choose the certificate template from the dropdown, then upload:
+   - CSV file: UTF‑8, comma separator, header optional, columns → `userid,templateid,code,filename,timecreated` (leave `templateid` and `code` blank to rely on the form selection and auto-numbering).
    - ZIP archive: contains every PDF referenced in the CSV `filename` column.
    - Need a sample? Use the **Download CSV template** button on the page.
 3. Click **Import certificates**.
@@ -44,8 +46,8 @@ The plugin requires Moodle 4.5 (2024041900) or newer and the official `tool_cert
 | Column      | Description                                                   |
 |-------------|---------------------------------------------------------------|
 | `userid`    | Moodle user ID receiving the certificate.                     |
-| `templateid`| ID of the certificate template (`tool_certificate_templates`).|
-| `code`      | Primary code shown on the certificate (max 40 chars).         |
+| `templateid`| Can stay empty; the template is chosen in the form (column kept for compatibility).|
+| `code`      | Leave empty — `tool_certificate` will generate the code.      |
 | `filename`  | PDF filename inside the ZIP archive.                          |
 | `timecreated` | Optional UNIX timestamp or date string (e.g. `2025-05-31`, `31.05.2025`). |
 

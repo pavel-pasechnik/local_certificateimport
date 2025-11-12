@@ -38,6 +38,12 @@ class import_form extends \moodleform {
     public function definition(): void {
         $mform = $this->_form;
 
+        $templateoptions = $this->_customdata['templateoptions'] ?? [];
+        $selectoptions = [0 => get_string('form:template:choose', 'local_certificateimport')] + $templateoptions;
+        $mform->addElement('select', 'templateid', get_string('form:template', 'local_certificateimport'), $selectoptions);
+        $mform->addHelpButton('templateid', 'form:template', 'local_certificateimport');
+        $mform->addRule('templateid', get_string('form:error:required', 'local_certificateimport'), 'required', null, 'client');
+
         $csvoptions = [
             'accepted_types' => ['.csv'],
             'maxbytes' => 0,
@@ -67,6 +73,9 @@ class import_form extends \moodleform {
     public function validation($data, $files): array {
         $errors = parent::validation($data, $files);
 
+        if (empty($data['templateid'])) {
+            $errors['templateid'] = get_string('form:error:required', 'local_certificateimport');
+        }
         if (!$this->get_new_filename('csvfile')) {
             $errors['csvfile'] = get_string('form:error:required', 'local_certificateimport');
         }

@@ -36,12 +36,16 @@ $PAGE->set_heading(get_string('pluginname', 'local_certificateimport'));
 
 require_once($CFG->libdir . '/filelib.php');
 
-$mform = new \local_certificateimport\form\import_form();
+$templateoptions = local_certificateimport_get_template_options();
+
+$mform = new \local_certificateimport\form\import_form(null, [
+    'templateoptions' => $templateoptions,
+]);
 $results = [];
 
 if ($mform->is_cancelled()) {
     redirect($PAGE->url);
-} else if ($mform->get_data()) {
+} else if ($data = $mform->get_data()) {
     $tempdirname = 'local_certificateimport/' . time() . '_' . random_string(6);
     $tempdir = make_temp_directory($tempdirname);
     $pdfdir = $tempdir . '/pdf';
@@ -53,6 +57,8 @@ if ($mform->is_cancelled()) {
         if (!$csvfilename || !$zipfilename) {
             throw new moodle_exception('error:missingfiles', 'local_certificateimport');
         }
+
+        $template = local_certificateimport_get_template((int)$data->templateid);
 
         $mform->save_files($tempdir);
         $csvpath = $tempdir . '/' . $csvfilename;
@@ -68,7 +74,7 @@ if ($mform->is_cancelled()) {
         }
         $zip->close();
 
-        $results = local_certificateimport_run_import($csvpath, $pdfdir);
+        $results = local_certificateimport_run_import($csvpath, $pdfdir, $template);
 
         $imported = count(array_filter($results, static function (array $row): bool {
             return $row['status'] === 'imported';
@@ -94,6 +100,13 @@ echo html_writer::div(get_string('page:instructions', 'local_certificateimport')
 if (!local_certificateimport_is_available()) {
     echo $OUTPUT->notification(
         get_string('status:unavailable:details', 'local_certificateimport'),
+        \core\output\notification::NOTIFY_WARNING
+    );
+}
+
+if (empty($templateoptions)) {
+    echo $OUTPUT->notification(
+        get_string('error:notemplates', 'local_certificateimport'),
         \core\output\notification::NOTIFY_WARNING
     );
 }

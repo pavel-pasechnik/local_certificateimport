@@ -31,16 +31,22 @@ require_once($CFG->libdir . '/filelib.php');
  *
  * @param string $csvpath Absolute path to the CSV file.
  * @param string $pdfdir  Directory that contains extracted PDF files.
+ * @param stdClass $template Selected certificate template record.
  * @return array<int, array<string, mixed>> Report rows.
  */
-function local_certificateimport_run_import(string $csvpath, string $pdfdir): array {
+function local_certificateimport_run_import(string $csvpath, string $pdfdir, stdClass $template): array {
     $records = local_certificateimport_parse_csv($csvpath);
     $fileindex = local_certificateimport_build_file_index($pdfdir);
     $fs = get_file_storage();
 
+    foreach ($records as &$record) {
+        $record['templateid'] = $template->id;
+    }
+    unset($record);
+
     $results = [];
     foreach ($records as $record) {
-        $results[] = local_certificateimport_process_record($record, $fileindex, $fs);
+        $results[] = local_certificateimport_process_record($record, $fileindex, $fs, $template);
     }
 
     return $results;
@@ -84,7 +90,6 @@ function local_certificateimport_parse_csv(string $csvpath): array {
             'line' => $line,
             'userid' => (int)trim((string)$row[0]),
             'templateid' => (int)trim((string)$row[1]),
-            'code' => trim((string)$row[2]),
             'filename' => trim((string)$row[3]),
             'timecreated' => local_certificateimport_normalize_time($row[4] ?? null),
         ];
@@ -104,15 +109,16 @@ function local_certificateimport_parse_csv(string $csvpath): array {
  * @param array $record Normalized CSV record.
  * @param array $fileindex Map of filenames (lowercase) to absolute paths.
  * @param file_storage $fs Moodle file storage API instance.
+ * @param stdClass $template Selected template record with context.
  * @return array<string, mixed>
  */
-function local_certificateimport_process_record(array $record, array $fileindex, file_storage $fs): array {
+function local_certificateimport_process_record(array $record, array $fileindex, file_storage $fs, stdClass $template): array {
     global $DB;
 
     $result = [
         'line' => $record['line'],
         'userid' => $record['userid'],
-        'code' => $record['code'],
+        'code' => '',
         'filename' => $record['filename'],
         'userdisplay' => '',
         'status' => 'error',
@@ -129,16 +135,6 @@ function local_certificateimport_process_record(array $record, array $fileindex,
             throw new moodle_exception('error:usernotfound', 'local_certificateimport', '', $record['userid']);
         }
         $result['userdisplay'] = fullname($user) . " (ID {$user->id})";
-
-        $template = $DB->get_record('tool_certificate_templates', ['id' => $record['templateid']], 'id, contextid');
-        if (!$template) {
-            throw new moodle_exception('error:templatenotfound', 'local_certificateimport', '', $record['templateid']);
-        }
-
-        $code = local_certificateimport_normalize_code($record['code']);
-        if ($code === '') {
-            throw new moodle_exception('error:codeempty', 'local_certificateimport');
-        }
 
         $storedfilename = clean_filename($record['filename']);
         if ($storedfilename === '') {
@@ -164,6 +160,7 @@ function local_certificateimport_process_record(array $record, array $fileindex,
 
         $newissue = false;
         if (!$issue) {
+            $code = local_certificateimport_generate_issue_code($user, $template);
             $issue = (object)[
                 'userid' => $record['userid'],
                 'templateid' => $record['templateid'],
@@ -178,12 +175,9 @@ function local_certificateimport_process_record(array $record, array $fileindex,
             ];
             $issue->id = $DB->insert_record('tool_certificate_issues', $issue);
             $newissue = true;
+            $result['code'] = $issue->code;
         } else {
             $needupdate = false;
-            if ($issue->code !== $code) {
-                $issue->code = $code;
-                $needupdate = true;
-            }
             if (!empty($record['timecreated']) && (int)$issue->timecreated !== (int)$record['timecreated']) {
                 $issue->timecreated = $record['timecreated'];
                 $needupdate = true;
@@ -191,6 +185,7 @@ function local_certificateimport_process_record(array $record, array $fileindex,
             if ($needupdate) {
                 $DB->update_record('tool_certificate_issues', $issue);
             }
+            $result['code'] = $issue->code ?? '';
         }
 
         // Replace existing stored files with the uploaded PDF.
@@ -217,21 +212,6 @@ function local_certificateimport_process_record(array $record, array $fileindex,
     }
 
     return $result;
-}
-
-/**
- * Normalizes certificate code values to match DB expectations.
- *
- * @param string $code
- * @return string
- */
-function local_certificateimport_normalize_code(string $code): string {
-    $code = trim($code);
-    if ($code === '') {
-        return '';
-    }
-
-    return (string)core_text::substr($code, 0, 40);
 }
 
 /**
@@ -417,4 +397,140 @@ function local_certificateimport_is_available(): bool {
     $dbman = $DB->get_manager();
     return $dbman->table_exists('tool_certificate_templates')
         && $dbman->table_exists('tool_certificate_issues');
+}
+
+/**
+ * Returns a list of available certificate templates for the selector.
+ *
+ * @return array<int, string>
+ */
+function local_certificateimport_get_template_options(): array {
+    global $DB;
+
+    if (!local_certificateimport_is_available()) {
+        return [];
+    }
+
+    $fields = 'id, name, contextid';
+    $templates = $DB->get_records('tool_certificate_templates', null, 'name ASC', $fields);
+    $options = [];
+    foreach ($templates as $template) {
+        $options[$template->id] = format_string($template->name, true, ['contextid' => $template->contextid]);
+    }
+
+    return $options;
+}
+
+/**
+ * Loads a certificate template record.
+ *
+ * @param int $templateid
+ * @return stdClass
+ * @throws moodle_exception
+ */
+function local_certificateimport_get_template(int $templateid): stdClass {
+    global $DB;
+
+    $template = $DB->get_record('tool_certificate_templates', ['id' => $templateid], '*');
+    if (!$template) {
+        throw new moodle_exception('error:templatenotfound', 'local_certificateimport', '', $templateid);
+    }
+
+    return $template;
+}
+
+/**
+ * Generates a certificate code using tool_certificate APIs when available.
+ *
+ * @param stdClass $user
+ * @param stdClass $template
+ * @return string
+ */
+function local_certificateimport_generate_issue_code(stdClass $user, stdClass $template): string {
+    global $DB;
+
+    $issuecontext = (object)[
+        'userid' => $user->id,
+        'templateid' => $template->id,
+    ];
+
+    $callbacks = [
+        component_callback('tool_certificate', 'generate_issue_code', [$issuecontext], ''),
+        component_callback('tool_certificate', 'generate_code', [$template->id, $user->id], ''),
+    ];
+
+    foreach ($callbacks as $code) {
+        if (is_string($code) && $code !== '') {
+            return local_certificateimport_trim_code($code);
+        }
+    }
+
+    if (class_exists('\tool_certificate\certificate')) {
+        foreach (['generate_issue_code', 'generate_code', 'generate_unique_code'] as $method) {
+            $code = local_certificateimport_call_certificate_method('\tool_certificate\certificate', $method, $user, $template, $issuecontext);
+            if (is_string($code) && $code !== '') {
+                return local_certificateimport_trim_code($code);
+            }
+        }
+    }
+
+    do {
+        $code = random_string(12);
+    } while ($DB->record_exists('tool_certificate_issues', ['code' => $code]));
+
+    return local_certificateimport_trim_code($code);
+}
+
+/**
+ * Trims certificate codes to the DB limit.
+ *
+ * @param string $code
+ * @return string
+ */
+function local_certificateimport_trim_code(string $code): string {
+    return (string)core_text::substr(trim($code), 0, 40);
+}
+
+/**
+ * Attempts to call a static method on the Workplace certificate class.
+ *
+ * @param string $class
+ * @param string $method
+ * @param stdClass $user
+ * @param stdClass $template
+ * @param stdClass $issuecontext
+ * @return string
+ */
+function local_certificateimport_call_certificate_method(string $class, string $method, stdClass $user, stdClass $template, stdClass $issuecontext): string {
+    if (!method_exists($class, $method)) {
+        return '';
+    }
+
+    try {
+        $reflection = new ReflectionMethod($class, $method);
+        if (!$reflection->isStatic()) {
+            return '';
+        }
+
+        $args = [];
+        foreach ($reflection->getParameters() as $parameter) {
+            $name = core_text::strtolower($parameter->getName());
+            if (in_array($name, ['issue', 'certificateissue'])) {
+                $args[] = $issuecontext;
+            } else if (in_array($name, ['template', 'templateid', 'certificate', 'certificateid'])) {
+                $args[] = $template->id;
+            } else if (in_array($name, ['user', 'userid'])) {
+                $args[] = $user->id;
+            } else if ($parameter->isDefaultValueAvailable()) {
+                $args[] = $parameter->getDefaultValue();
+            } else {
+                return '';
+            }
+        }
+
+        return (string)$reflection->invokeArgs(null, $args);
+    } catch (Throwable $throwable) {
+        debugging('local_certificateimport: Unable to call certificate generator: ' . $throwable->getMessage(), DEBUG_DEVELOPER);
+        return '';
+    }
 }
