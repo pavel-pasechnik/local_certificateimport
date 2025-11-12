@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 <ruleset name="Moodle plugin coding standards">
 
-    <!-- Стандарт Moodle -->
+    <!-- Moodle Standard -->
     <rule ref="moodle"/>
 
-    <!-- Исключаем лишние каталоги -->
+    <!-- Exclude unnecessary directories -->
     <exclude-pattern>*/.git/*</exclude-pattern>
     <exclude-pattern>*/.github/*</exclude-pattern>
     <exclude-pattern>*/vendor/*</exclude-pattern>
     <exclude-pattern>*/.history/*</exclude-pattern>
     <exclude-pattern>*/node_modules/*</exclude-pattern>
 
-    <!-- Максимальная длина строки -->
+    <!-- Maximum string length -->
     <config name="lineLength" value="132"/>
 
-    <!-- Проверять все файлы в текущем каталоге -->
+    <!-- Check all files in the current directory-->
     <file>.</file>
 </ruleset>
