@@ -26,7 +26,8 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'Импорт PDF-сертификатов';
 $string['pagetitle'] = 'Импорт CSV/ZIP сертификатов';
-$string['page:instructions'] = 'Загрузите CSV в формате <code>userid,templateid,code,filename,timecreated</code> и ZIP с PDF-файлами, где имена совпадают с колонкой <code>filename</code>. После импорта проверяйте выдачи через <code>tool/certificate/index.php</code>.';
+$string['page:instructions'] = 'Загрузите CSV в формате <code>userid,templateid,code,filename,timecreated</code> и ZIP с PDF-файлами, где имена совпадают с колонкой <code>filename</code>. После импорта проверяйте выдачи через <code>tool/certificate/index.php</code>. Ниже можно скачать готовый шаблон CSV.';
+$string['page:csvtemplate'] = 'Скачать шаблон CSV';
 
 $string['form:header'] = 'Входные файлы';
 $string['form:csvfile'] = 'CSV-файл';

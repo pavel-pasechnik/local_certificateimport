@@ -90,6 +90,13 @@ if ($mform->is_cancelled()) {
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('pagetitle', 'local_certificateimport'));
 echo html_writer::div(get_string('page:instructions', 'local_certificateimport'), 'alert alert-info');
+
+$templateurl = new moodle_url('/local/certificateimport/template.php');
+$templatelink = html_writer::link($templateurl, get_string('page:csvtemplate', 'local_certificateimport'), [
+    'class' => 'btn btn-secondary',
+    'role' => 'button',
+]);
+echo html_writer::div($templatelink, 'mb-4');
 $mform->display();
 
 echo $OUTPUT->heading(get_string('report:title', 'local_certificateimport'), 3);

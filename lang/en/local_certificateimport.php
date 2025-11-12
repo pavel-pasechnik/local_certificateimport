@@ -26,7 +26,8 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'Certificate PDF import';
 $string['pagetitle'] = 'CSV/ZIP certificate import';
-$string['page:instructions'] = 'Upload a CSV file in the format <code>userid,templateid,code,filename,timecreated</code> and a ZIP file that contains all PDF certificates. After the import you can verify the entries via <code>tool/certificate/index.php</code>.';
+$string['page:instructions'] = 'Upload a CSV file in the format <code>userid,templateid,code,filename,timecreated</code> and a ZIP file that contains all PDF certificates. After the import you can verify the entries via <code>tool/certificate/index.php</code>. Use the download link below if you need a ready-made CSV template.';
+$string['page:csvtemplate'] = 'Download CSV template';
 
 $string['form:header'] = 'Source files';
 $string['form:csvfile'] = 'CSV file';
