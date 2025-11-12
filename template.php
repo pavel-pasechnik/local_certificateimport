@@ -29,8 +29,8 @@ require_login();
 $context = context_system::instance();
 require_capability('local/certificateimport:import', $context);
 
-$csvcontent = "userid,templateid,code,filename,timecreated\n";
-$csvcontent .= "123,,,sample.pdf,1735689600\n";
+$csvcontent = "userid,filename,timecreated\n";
+$csvcontent .= "1001,certificate.pdf,\n";
 
 $filename = 'certificateimport_template.csv';
 

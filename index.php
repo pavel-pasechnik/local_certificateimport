@@ -113,10 +113,14 @@ if (empty($templateoptions)) {
 
 $templateurl = new moodle_url('/local/certificateimport/template.php');
 $templatelink = html_writer::link($templateurl, get_string('page:csvtemplate', 'local_certificateimport'), [
-    'class' => 'btn btn-secondary',
+    'class' => 'btn btn-secondary mr-2',
     'role' => 'button',
 ]);
-echo html_writer::div($templatelink, 'mb-4');
+$reportlink = html_writer::link(new moodle_url('/local/certificateimport/report.php'), get_string('link:report', 'local_certificateimport'), [
+    'class' => 'btn btn-outline-secondary',
+    'role' => 'button',
+]);
+echo html_writer::div($templatelink . $reportlink, 'mb-4');
 $mform->display();
 
 echo $OUTPUT->heading(get_string('report:title', 'local_certificateimport'), 3);

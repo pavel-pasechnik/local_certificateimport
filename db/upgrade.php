@@ -30,15 +30,29 @@
  */
 function xmldb_local_certificateimport_upgrade($oldversion) {
     global $DB;
+    $dbman = $DB->get_manager();
 
-    if ($oldversion < 2025111200) {
-        // For example: add a new table, field, or configuration setting.
-        upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
-    }
+    if ($oldversion < 2025111201) {
+        $table = new xmldb_table('local_certificateimport_log');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $table->add_field('issueid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $table->add_field('filename', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, '');
+        $table->add_field('storedfilename', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, '');
+        $table->add_field('timeimported', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
 
-    if ($oldversion < 2025111200) {
-        // Capability definition and import workflow refinements.
-        upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('issueid_fk', XMLDB_KEY_UNIQUE, ['issueid']);
+
+        $table->add_index('templateid_idx', XMLDB_INDEX_NOTUNIQUE, ['templateid']);
+        $table->add_index('userid_idx', XMLDB_INDEX_NOTUNIQUE, ['userid']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        upgrade_plugin_savepoint(true, 2025111201, 'local', 'certificateimport');
     }
 
     return true;

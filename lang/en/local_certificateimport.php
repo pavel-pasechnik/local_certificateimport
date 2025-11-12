@@ -26,14 +26,16 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'Certificate PDF import';
 $string['pagetitle'] = 'CSV/ZIP certificate import';
-$string['page:instructions'] = 'Select the certificate template below, then upload a CSV file in the format <code>userid,templateid,code,filename,timecreated</code> (leave <code>templateid</code> and <code>code</code> blank; the selected template and tool_certificate will fill them in) and a ZIP file that contains all PDF certificates. After the import you can verify the entries via <code>tool/certificate/index.php</code>. Use the download link below if you need a ready-made CSV template.';
+$string['page:instructions'] = 'Select the certificate template below, then upload a CSV file in the format <code>userid,filename,timecreated</code> (the <code>timecreated</code> column is optional) and a ZIP file that contains all PDF certificates. After the import you can verify the entries via <code>tool/certificate/index.php</code>. Use the download link below if you need a ready-made CSV template.';
 $string['page:csvtemplate'] = 'Download CSV template';
+$string['link:report'] = 'View imported certificates';
+$string['nav:report'] = 'Imported certificates report';
 
 $string['form:template'] = 'Certificate template';
 $string['form:template_help'] = 'Choose which certificate template the uploaded issues should belong to. This selection overrides any template IDs in the CSV.';
 $string['form:template:choose'] = 'Choose a template';
 $string['form:csvfile'] = 'CSV file';
-$string['form:csvfile_help'] = 'The CSV must contain the columns: userid, templateid, code, filename, timecreated. Leave the templateid and code columns empty to rely on the form selection and auto-numbering. The timecreated column may contain a UNIX timestamp or a readable date (YYYY-MM-DD, DD.MM.YYYY, etc.).';
+$string['form:csvfile_help'] = 'The CSV must contain the columns: userid, filename, timecreated. The timecreated column may contain a UNIX timestamp or a readable date (YYYY-MM-DD, DD.MM.YYYY, etc.) or be left blank.';
 $string['form:zipfile'] = 'ZIP archive with PDFs';
 $string['form:zipfile_help'] = 'PDF filenames have to match the <code>filename</code> column in the CSV.';
 $string['form:submit'] = 'Import certificates';
@@ -54,7 +56,7 @@ $string['result:message:filemissing'] = 'PDF file "{$a}" was not found in the up
 
 $string['error:missingfiles'] = 'Both CSV and ZIP files must be provided.';
 $string['error:csvread'] = 'Unable to read the CSV file.';
-$string['error:csvcolumns'] = 'Line {$a}: the row does not match the expected format (userid,templateid,code,filename,timecreated). Template and code columns may be blank but they must be present.';
+$string['error:csvcolumns'] = 'Line {$a}: the row does not match the expected format (userid,filename,timecreated). The first two columns are required.';
 $string['error:csvempty'] = 'The CSV file does not contain any data rows.';
 $string['error:usernotfound'] = 'User with ID {$a} was not found.';
 $string['error:templatenotfound'] = 'Certificate template with ID {$a} was not found.';
@@ -67,7 +69,19 @@ $string['error:unexpected'] = 'Unexpected error: {$a}';
 $string['status:available'] = 'Available';
 $string['status:unavailable'] = 'Unavailable';
 $string['status:unavailable:details'] = 'The importer is disabled until the official Certificate tool (tool_certificate) is installed and its database tables are present.';
+$string['error:notemplates'] = 'No certificate templates were found. Create one via tool_certificate before running the import.';
+
+$string['report:heading'] = 'Imported certificates';
+$string['report:instructions'] = 'Pick a certificate template to list all users whose certificates were imported via this tool. The list shows user ID, display name, and the uploaded PDF filename, and can be exported to CSV.';
+$string['report:filter'] = 'Show list';
+$string['report:export'] = 'Export CSV';
+$string['report:none'] = 'No imported certificates were logged for this template.';
+$string['report:picktemplate'] = 'Select a template and submit the form to see imported certificates.';
+$string['report:col:userid'] = 'User ID';
+$string['report:col:username'] = 'Display name';
+$string['report:col:filename'] = 'Filename';
+$string['report:col:code'] = 'Certificate code';
+$string['report:col:imported'] = 'Certificate time';
 
 $string['privacy:metadata'] = 'The plugin does not store personal data beyond the standard tool_certificate tables.';
 $string['certificateimport:import'] = 'Import certificate PDF files';
-$string['error:notemplates'] = 'No certificate templates were found. Create one via tool_certificate before running the import.';
