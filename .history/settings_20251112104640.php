@@ -15,20 +15,26 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version metadata for local_certificateimport.
+ * Admin settings hook for local_certificateimport.
  *
  * @package   local_certificateimport
- * @copyright 2025 Pavel Pasechnik
+ * @copyright 2025
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'local_certificateimport';
-$plugin->release   = '1.0.1';
-$plugin->version   = 2025111200;
-$plugin->requires  = 2024041900;
-$plugin->source = 'https://github.com/pavel-pasechnik/local_certificateimport';
-$plugin->dependencies = [
-    'tool_certificate' => 2024041900,
-];
+if ($hassiteconfig) {
+    $category = 'certificates';
+
+    if (!$ADMIN->locate($category)) {
+        $ADMIN->add('root', new admin_category($category, get_string('pluginname', 'tool_certificate')));
+    }
+
+    $ADMIN->add($category, new admin_externalpage(
+        'local_certificateimport',
+        get_string('pluginname', 'local_certificateimport'),
+        new moodle_url('/local/certificateimport/index.php'),
+        'local/certificateimport:import'
+    ));
+}
