@@ -35,8 +35,44 @@ $PAGE->set_title(get_string('pagetitle', 'local_certificateimport'));
 $PAGE->set_heading(get_string('pluginname', 'local_certificateimport'));
 
 require_once($CFG->libdir . '/filelib.php');
+require_once($CFG->libdir . '/csvlib.class.php');
+
+$download = optional_param('download', '', PARAM_ALPHA);
 
 $templateoptions = local_certificateimport_get_template_options();
+
+$sessionresults = $SESSION->local_certificateimport_lastresults ?? [];
+if ($download === 'csv') {
+    require_sesskey();
+    if (empty($sessionresults)) {
+        redirect($PAGE->url, get_string('result:export:empty', 'local_certificateimport'), 0,
+            \core\output\notification::NOTIFY_WARNING);
+    }
+
+    $csv = new csv_export_writer();
+    $csv->set_filename('certificateimport-latest');
+    $csv->add_data([
+        get_string('result:table:user', 'local_certificateimport'),
+        get_string('result:table:code', 'local_certificateimport'),
+        get_string('result:table:status', 'local_certificateimport'),
+    ]);
+
+    foreach ($sessionresults as $row) {
+        $statuslabel = get_string('result:status:' . $row['status'], 'local_certificateimport');
+        $statusdetails = $statuslabel;
+        if (!empty($row['message'])) {
+            $statusdetails .= ' - ' . $row['message'];
+        }
+        $csv->add_data([
+            $row['userdisplay'] ?: get_string('user') . ' #' . $row['userid'],
+            $row['code'],
+            $statusdetails,
+        ]);
+    }
+
+    $csv->download_file();
+    exit;
+}
 
 $mform = new \local_certificateimport\form\import_form(null, [
     'templateoptions' => $templateoptions,
@@ -93,6 +129,12 @@ if ($mform->is_cancelled()) {
     }
 }
 
+if (!empty($results)) {
+    $SESSION->local_certificateimport_lastresults = $results;
+} else {
+    unset($SESSION->local_certificateimport_lastresults);
+}
+
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('pagetitle', 'local_certificateimport'));
 echo html_writer::div(get_string('page:instructions', 'local_certificateimport'), 'alert alert-info');
@@ -113,19 +155,25 @@ if (empty($templateoptions)) {
 
 $templateurl = new moodle_url('/local/certificateimport/template.php');
 $templatelink = html_writer::link($templateurl, get_string('page:csvtemplate', 'local_certificateimport'), [
-    'class' => 'btn btn-secondary mr-2',
+    'class' => 'btn btn-secondary',
     'role' => 'button',
 ]);
-$reportlink = html_writer::link(new moodle_url('/local/certificateimport/report.php'), get_string('link:report', 'local_certificateimport'), [
-    'class' => 'btn btn-outline-secondary',
-    'role' => 'button',
-]);
-echo html_writer::div($templatelink . $reportlink, 'mb-4');
+echo html_writer::div($templatelink, 'mb-4');
 $mform->display();
 
 echo $OUTPUT->heading(get_string('report:title', 'local_certificateimport'), 3);
 
 if (!empty($results)) {
+    $exporturl = new moodle_url('/local/certificateimport/index.php', [
+        'download' => 'csv',
+        'sesskey' => sesskey(),
+    ]);
+    $exportlink = html_writer::link($exporturl, get_string('result:export', 'local_certificateimport'), [
+        'class' => 'btn btn-secondary mb-3',
+        'role' => 'button',
+    ]);
+    echo $exportlink;
+
     $table = new html_table();
     $table->attributes['class'] = 'generaltable certimport-report';
     $table->head = [

@@ -28,8 +28,6 @@ $string['pluginname'] = 'Імпорт PDF-сертифікатів';
 $string['pagetitle'] = 'Імпорт CSV/ZIP сертифікатів';
 $string['page:instructions'] = 'Оберіть шаблон сертифіката нижче, далі завантажте CSV у форматі <code>userid,filename,timecreated</code> (стовпець <code>timecreated</code> можна залишити порожнім) та ZIP з PDF-файлами, імена яких збігаються зі стовпцем <code>filename</code>. Після імпорту перевіряйте видані сертифікати через <code>tool/certificate/index.php</code>. Нижче доступний готовий шаблон CSV.';
 $string['page:csvtemplate'] = 'Завантажити шаблон CSV';
-$string['link:report'] = 'Список імпортованих сертифікатів';
-$string['nav:report'] = 'Звіт за імпортованими сертифікатами';
 
 $string['form:template'] = 'Шаблон сертифіката';
 $string['form:template_help'] = 'Оберіть шаблон, у який будуть імпортовані сертифікати. Значення з CSV ігнорується.';
@@ -42,6 +40,8 @@ $string['form:submit'] = 'Імпортувати сертифікати';
 $string['form:error:required'] = 'Це обовʼязкове поле.';
 
 $string['report:title'] = 'Звіт про імпорт';
+$string['result:export'] = 'Експортувати звіт у CSV';
+$string['result:export:empty'] = 'Немає останніх результатів імпорту для експорту.';
 $string['result:none'] = 'Щоб побачити звіт, виконайте імпорт.';
 $string['result:summary'] = 'Успішно імпортовано {$a->imported} з {$a->total} рядків.';
 $string['result:table:user'] = 'Користувач';
@@ -70,18 +70,6 @@ $string['status:available'] = 'Доступний';
 $string['status:unavailable'] = 'Недоступний';
 $string['status:unavailable:details'] = 'Імпорт вимкнено, доки не буде встановлено та увімкнено офіційний плагін Certificate (tool_certificate) і його таблиці в базі даних.';
 $string['error:notemplates'] = 'Не знайдено жодного шаблону сертифіката. Створіть його в tool_certificate перед імпортом.';
-
-$string['report:heading'] = 'Імпортовані сертифікати';
-$string['report:instructions'] = 'Оберіть шаблон сертифіката, щоб побачити користувачів, чиї PDF були завантажені через цей інструмент. У списку показані ID користувача, відображуване імʼя та назва завантаженого файлу. Таблицю можна експортувати в CSV.';
-$string['report:filter'] = 'Показати список';
-$string['report:export'] = 'Експорт CSV';
-$string['report:none'] = 'Для цього шаблону ще немає імпортованих записів.';
-$string['report:picktemplate'] = 'Оберіть шаблон і відправте форму, щоб побачити імпортовані сертифікати.';
-$string['report:col:userid'] = 'ID користувача';
-$string['report:col:username'] = 'Відображуване імʼя';
-$string['report:col:filename'] = 'Назва файла';
-$string['report:col:code'] = 'Системний номер';
-$string['report:col:imported'] = 'Час сертифіката';
 
 $string['privacy:metadata'] = 'Плагін не зберігає персональні дані поза стандартними таблицями tool_certificate.';
 $string['certificateimport:import'] = 'Імпортувати PDF сертифікати';

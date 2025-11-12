@@ -40,10 +40,4 @@ if ($hassiteconfig) {
         'local/certificateimport:import'
     ));
 
-    $ADMIN->add($category, new admin_externalpage(
-        'local_certificateimport_report',
-        get_string('nav:report', 'local_certificateimport'),
-        new moodle_url('/local/certificateimport/report.php'),
-        'local/certificateimport:import'
-    ));
 }

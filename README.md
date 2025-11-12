@@ -14,7 +14,6 @@
 - 📝 One-click CSV template download so column order and sample data are ready.
 - 🎯 Pick the destination certificate template from a dropdown instead of memorising template IDs.
 - 🔢 Certificate numbers are generated automatically by the official `tool_certificate` component, so the CSV `code` column can stay empty.
-- 📑 Review every imported certificate (user ID, display name, filename) and export the list to CSV for audits.
 - 📁 Automatically extracts PDFs, creates missing records in `tool_certificate_issues`, and stores files via the Moodle file API.
 - 🔁 Idempotent: updates existing issues (code/time) and replaces stored PDFs when needed.
 - 📊 Generates an import report showing *User → Code → Status* with “Imported / File not found / Error”.
@@ -40,7 +39,7 @@ The plugin requires Moodle 4.5 (2024041900) or newer and the official `tool_cert
    - ZIP archive: contains every PDF referenced in the CSV `filename` column.
    - Need a sample? Use the **Download CSV template** button on the page.
 3. Click **Import certificates**.
-4. Review the on-page report. You can cross-check results via `tool/certificate/index.php` or open **Site administration → Certificates → Imported certificates report** to see a full log with CSV export.
+4. Review the on-page report (and use the **Export CSV** button if you need a copy). You can also cross-check results via `tool/certificate/index.php`.
 
 ### CSV tips
 

@@ -28,8 +28,6 @@ $string['pluginname'] = 'Certificate PDF import';
 $string['pagetitle'] = 'CSV/ZIP certificate import';
 $string['page:instructions'] = 'Select the certificate template below, then upload a CSV file in the format <code>userid,filename,timecreated</code> (the <code>timecreated</code> column is optional) and a ZIP file that contains all PDF certificates. After the import you can verify the entries via <code>tool/certificate/index.php</code>. Use the download link below if you need a ready-made CSV template.';
 $string['page:csvtemplate'] = 'Download CSV template';
-$string['link:report'] = 'View imported certificates';
-$string['nav:report'] = 'Imported certificates report';
 
 $string['form:template'] = 'Certificate template';
 $string['form:template_help'] = 'Choose which certificate template the uploaded issues should belong to. This selection overrides any template IDs in the CSV.';
@@ -42,6 +40,8 @@ $string['form:submit'] = 'Import certificates';
 $string['form:error:required'] = 'This file is required.';
 
 $string['report:title'] = 'Import report';
+$string['result:export'] = 'Export report to CSV';
+$string['result:export:empty'] = 'No recent import results are available for export.';
 $string['result:none'] = 'Upload files and run the import to see the report.';
 $string['result:summary'] = '{$a->imported} of {$a->total} rows imported successfully.';
 $string['result:table:user'] = 'User';
@@ -70,18 +70,6 @@ $string['status:available'] = 'Available';
 $string['status:unavailable'] = 'Unavailable';
 $string['status:unavailable:details'] = 'The importer is disabled until the official Certificate tool (tool_certificate) is installed and its database tables are present.';
 $string['error:notemplates'] = 'No certificate templates were found. Create one via tool_certificate before running the import.';
-
-$string['report:heading'] = 'Imported certificates';
-$string['report:instructions'] = 'Pick a certificate template to list all users whose certificates were imported via this tool. The list shows user ID, display name, and the uploaded PDF filename, and can be exported to CSV.';
-$string['report:filter'] = 'Show list';
-$string['report:export'] = 'Export CSV';
-$string['report:none'] = 'No imported certificates were logged for this template.';
-$string['report:picktemplate'] = 'Select a template and submit the form to see imported certificates.';
-$string['report:col:userid'] = 'User ID';
-$string['report:col:username'] = 'Display name';
-$string['report:col:filename'] = 'Filename';
-$string['report:col:code'] = 'Certificate code';
-$string['report:col:imported'] = 'Certificate time';
 
 $string['privacy:metadata'] = 'The plugin does not store personal data beyond the standard tool_certificate tables.';
 $string['certificateimport:import'] = 'Import certificate PDF files';

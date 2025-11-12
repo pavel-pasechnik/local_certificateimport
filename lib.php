@@ -199,16 +199,6 @@ function local_certificateimport_process_record(array $record, array $fileindex,
             'filename' => $storedfilename,
         ], $filepath);
 
-        $importtime = time();
-        local_certificateimport_log_issue(
-            $issue->id,
-            $record['userid'],
-            $template->id,
-            $originalfilename,
-            $storedfilename,
-            (int)$issue->timecreated
-        );
-
         $result['status'] = 'imported';
         $result['message'] = $newissue
             ? get_string('result:message:newissue', 'local_certificateimport')
@@ -543,55 +533,4 @@ function local_certificateimport_call_certificate_method(string $class, string $
         debugging('local_certificateimport: Unable to call certificate generator: ' . $throwable->getMessage(), DEBUG_DEVELOPER);
         return '';
     }
-}
-
-/**
- * Stores or updates metadata about imported certificates.
- *
- * @param int $issueid
- * @param int $userid
- * @param int $templateid
- * @param string $originalfilename
- * @param string $storedfilename
- * @param int $issuetime
- */
-function local_certificateimport_log_issue(int $issueid, int $userid, int $templateid, string $originalfilename, string $storedfilename, int $issuetime): void {
-    global $DB;
-
-    $data = (object)[
-        'issueid' => $issueid,
-        'userid' => $userid,
-        'templateid' => $templateid,
-        'filename' => trim($originalfilename),
-        'storedfilename' => trim($storedfilename),
-        'timeimported' => $issuetime,
-    ];
-
-    if ($record = $DB->get_record('local_certificateimport_log', ['issueid' => $issueid], 'id')) {
-        $data->id = $record->id;
-        $DB->update_record('local_certificateimport_log', $data);
-    } else {
-        $DB->insert_record('local_certificateimport_log', $data);
-    }
-}
-
-/**
- * Fetches imported certificate entries for reporting/export.
- *
- * @param int $templateid
- * @return array<int, stdClass>
- */
-function local_certificateimport_get_import_log(int $templateid): array {
-    global $DB;
-
-    $namefields = 'u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename';
-    $sql = "SELECT l.id, l.issueid, l.userid, l.templateid, l.filename, l.storedfilename,
-                   l.timeimported, i.code, $namefields
-              FROM {local_certificateimport_log} l
-              JOIN {tool_certificate_issues} i ON i.id = l.issueid
-         LEFT JOIN {user} u ON u.id = l.userid
-             WHERE l.templateid = :templateid
-          ORDER BY l.timeimported DESC, l.id DESC";
-
-    return $DB->get_records_sql($sql, ['templateid' => $templateid]);
 }
