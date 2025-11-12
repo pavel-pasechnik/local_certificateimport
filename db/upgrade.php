@@ -32,7 +32,7 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
     global $DB;
     $dbman = $DB->get_manager();
 
-    if ($oldversion < 2025111201) {
+    if ($oldversion < 2025111200) {
         $table = new xmldb_table('local_certificateimport_log');
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
         $table->add_field('issueid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
@@ -52,7 +52,7 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        upgrade_plugin_savepoint(true, 2025111201, 'local', 'certificateimport');
+        upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
     }
 
     return true;
