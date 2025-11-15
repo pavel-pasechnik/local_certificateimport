@@ -26,6 +26,35 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/filelib.php');
 
+if (!defined('LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_PENDING')) {
+    define('LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_PENDING', 'pending');
+}
+if (!defined('LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_PROCESSING')) {
+    define('LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_PROCESSING', 'processing');
+}
+if (!defined('LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_COMPLETED')) {
+    define('LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_COMPLETED', 'completed');
+}
+if (!defined('LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_COMPLETED_WITH_ERRORS')) {
+    define('LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_COMPLETED_WITH_ERRORS', 'completed_errors');
+}
+if (!defined('LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_FAILED')) {
+    define('LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_FAILED', 'failed');
+}
+
+if (!defined('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED')) {
+    define('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED', 'queued');
+}
+if (!defined('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_FILEMISSING')) {
+    define('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_FILEMISSING', 'filemissing');
+}
+if (!defined('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR')) {
+    define('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR', 'error');
+}
+if (!defined('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_REGISTERED')) {
+    define('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_REGISTERED', 'registered');
+}
+
 /**
  * Runs the import pipeline for a CSV file and a directory with extracted PDFs.
  *
@@ -35,18 +64,29 @@ require_once($CFG->libdir . '/filelib.php');
  * @return array<int, array<string, mixed>> Report rows.
  */
 function local_certificateimport_run_import(string $csvpath, string $pdfdir, stdClass $template): array {
+    global $DB, $USER;
+
     $records = local_certificateimport_parse_csv($csvpath);
     $fileindex = local_certificateimport_build_file_index($pdfdir);
-    $fs = get_file_storage();
+    $converter = new \local_certificateimport\local\converter();
+    $now = time();
 
-    foreach ($records as &$record) {
-        $record['templateid'] = $template->id;
-    }
-    unset($record);
+    $batch = (object)[
+        'templateid' => $template->id,
+        'createdby' => $USER->id,
+        'status' => LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_PENDING,
+        'totalitems' => count($records),
+        'processeditems' => 0,
+        'timecreated' => $now,
+        'timeupdated' => $now,
+        'timeregistered' => 0,
+    ];
+    $batch->id = $DB->insert_record('local_certimp_batches', $batch);
 
     $results = [];
     foreach ($records as $record) {
-        $results[] = local_certificateimport_process_record($record, $fileindex, $fs, $template);
+        $record['templateid'] = $template->id;
+        $results[] = local_certificateimport_stage_record($record, $fileindex, $template, $batch->id, $converter);
     }
 
     return $results;
@@ -111,8 +151,32 @@ function local_certificateimport_parse_csv(string $csvpath): array {
  * @param stdClass $template Selected template record with context.
  * @return array<string, mixed>
  */
-function local_certificateimport_process_record(array $record, array $fileindex, file_storage $fs, stdClass $template): array {
+function local_certificateimport_stage_record(
+    array $record,
+    array $fileindex,
+    stdClass $template,
+    int $batchid,
+    \local_certificateimport\local\converter $converter
+): array {
     global $DB;
+
+    $fs = get_file_storage();
+    $context = context_system::instance();
+    $now = time();
+
+    $item = (object)[
+        'batchid' => $batchid,
+        'userid' => $record['userid'],
+        'filename' => $record['filename'],
+        'csvline' => $record['line'],
+        'status' => LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR,
+        'backgroundfileid' => null,
+        'issueid' => null,
+        'issuetime' => $record['timecreated'] ?? 0,
+        'timecreated' => $now,
+        'timeprocessed' => 0,
+    ];
+    $item->id = $DB->insert_record('local_certimp_items', $item);
 
     $result = [
         'line' => $record['line'],
@@ -120,7 +184,7 @@ function local_certificateimport_process_record(array $record, array $fileindex,
         'code' => '',
         'filename' => $record['filename'],
         'userdisplay' => '',
-        'status' => 'error',
+        'status' => LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR,
         'message' => '',
     ];
 
@@ -135,7 +199,6 @@ function local_certificateimport_process_record(array $record, array $fileindex,
         }
         $result['userdisplay'] = fullname($user) . " (ID {$user->id})";
 
-        $originalfilename = $record['filename'];
         $storedfilename = clean_filename($record['filename']);
         if ($storedfilename === '') {
             throw new moodle_exception('error:filename', 'local_certificateimport', '', $record['filename']);
@@ -146,72 +209,234 @@ function local_certificateimport_process_record(array $record, array $fileindex,
 
         $filepath = local_certificateimport_locate_pdf($fileindex, $record['filename']);
         if (!$filepath) {
-            $result['status'] = 'filemissing';
+            $result['status'] = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_FILEMISSING;
             $result['message'] = get_string('result:message:filemissing', 'local_certificateimport', $record['filename']);
+            $item->status = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_FILEMISSING;
+            $DB->update_record('local_certimp_items', $item);
             return $result;
         }
 
-        $timecreated = $record['timecreated'] ?? time();
-
-        $issue = $DB->get_record('tool_certificate_issues', [
-            'userid' => $record['userid'],
-            'templateid' => $record['templateid'],
-        ]);
-
-        $newissue = false;
-        if (!$issue) {
-            $code = local_certificateimport_generate_issue_code($user, $template);
-            $issue = (object)[
-                'userid' => $record['userid'],
-                'templateid' => $record['templateid'],
-                'code' => $code,
-                'emailed' => 0,
-                'timecreated' => $timecreated,
-                'expires' => 0,
-                'data' => null,
-                'component' => 'tool_certificate',
-                'courseid' => null,
-                'archived' => 0,
-            ];
-            $issue->id = $DB->insert_record('tool_certificate_issues', $issue);
-            $newissue = true;
-            $result['code'] = $issue->code;
-        } else {
-            $needupdate = false;
-            if (!empty($record['timecreated']) && (int)$issue->timecreated !== (int)$record['timecreated']) {
-                $issue->timecreated = $record['timecreated'];
-                $needupdate = true;
-            }
-            if ($needupdate) {
-                $DB->update_record('tool_certificate_issues', $issue);
-            }
-            $result['code'] = $issue->code ?? '';
-        }
-
-        // Replace existing stored files with the uploaded PDF.
-        $fs->delete_area_files($template->contextid, 'tool_certificate', 'issues', $issue->id);
-        $fs->create_file_from_pathname([
-            'contextid' => $template->contextid,
-            'component' => 'tool_certificate',
-            'filearea' => 'issues',
-            'itemid' => $issue->id,
+        $jpegpath = $converter->convert($filepath);
+        $jpgname = pathinfo($storedfilename, PATHINFO_FILENAME) . '.jpg';
+        $storedfile = $fs->create_file_from_pathname([
+            'contextid' => $context->id,
+            'component' => 'local_certificateimport',
+            'filearea' => 'backgrounds',
+            'itemid' => $item->id,
             'filepath' => '/',
-            'filename' => $storedfilename,
-        ], $filepath);
+            'filename' => $jpgname,
+        ], $jpegpath);
+        @unlink($jpegpath);
 
-        $result['status'] = 'imported';
-        $result['message'] = $newissue
-            ? get_string('result:message:newissue', 'local_certificateimport')
-            : get_string('result:message:updatedissue', 'local_certificateimport');
+        $item->backgroundfileid = $storedfile->get_id();
+        $item->status = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED;
+        $DB->update_record('local_certimp_items', $item);
+
+        $result['status'] = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED;
+        $result['message'] = get_string('result:message:queued', 'local_certificateimport');
     } catch (moodle_exception $exception) {
-        $result['status'] = 'error';
+        $item->status = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR;
+        $DB->update_record('local_certimp_items', $item);
+        $result['status'] = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR;
         $result['message'] = $exception->getMessage();
     } catch (Throwable $throwable) {
-        $result['status'] = 'error';
-        $result['message'] = get_string('error:unexpected', 'local_certificateimport', $throwable->getMessage());
+        $errormessage = get_string('error:unexpected', 'local_certificateimport', $throwable->getMessage());
+        $item->status = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR;
+        $DB->update_record('local_certimp_items', $item);
+        $result['status'] = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR;
+        $result['message'] = $errormessage;
     }
 
     return $result;
+}
+
+/**
+ * Returns recent import batches with aggregated counters.
+ *
+ * @param int $limit
+ * @return array<int, stdClass>
+ */
+function local_certificateimport_get_recent_batches(int $limit = 10): array {
+    global $DB;
+
+    if (!local_certificateimport_is_available()) {
+        return [];
+    }
+
+    $sql = "SELECT b.*, t.name AS templatename, t.contextid AS templatecontextid,
+                   (SELECT COUNT(1) FROM {local_certimp_items} i WHERE i.batchid = b.id) AS items_total,
+                   (SELECT COUNT(1) FROM {local_certimp_items} i WHERE i.batchid = b.id AND i.status = ?) AS items_ready,
+                   (SELECT COUNT(1) FROM {local_certimp_items} i WHERE i.batchid = b.id AND i.status = ?) AS items_registered,
+                   (SELECT COUNT(1) FROM {local_certimp_items} i WHERE i.batchid = b.id AND i.status = ?) AS items_errors
+              FROM {local_certimp_batches} b
+              JOIN {tool_certificate_templates} t ON t.id = b.templateid
+          ORDER BY b.timecreated DESC";
+    $params = [
+        LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED,
+        LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_REGISTERED,
+        LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR,
+    ];
+
+    return $DB->get_records_sql($sql, $params, 0, $limit);
+}
+
+/**
+ * Checks if a batch still has queued items waiting for registration.
+ *
+ * @param int $batchid
+ * @return bool
+ */
+function local_certificateimport_batch_has_ready_items(int $batchid): bool {
+    global $DB;
+
+    return $DB->record_exists('local_certimp_items', [
+        'batchid' => $batchid,
+        'status' => LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED,
+    ]);
+}
+
+/**
+ * Runs registration via tool_certificate for a staged batch.
+ *
+ * @param int $batchid
+ * @return array
+ * @throws moodle_exception
+ */
+function local_certificateimport_register_batch(int $batchid): array {
+    global $DB;
+
+    if (!local_certificateimport_is_available()) {
+        throw new moodle_exception('status:unavailable:details', 'local_certificateimport');
+    }
+
+    $batch = $DB->get_record('local_certimp_batches', ['id' => $batchid], '*', MUST_EXIST);
+
+    $permittedstatuses = [
+        LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_PENDING,
+        LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_FAILED,
+        LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_COMPLETED_WITH_ERRORS,
+    ];
+    if (!in_array($batch->status, $permittedstatuses, true)) {
+        throw new moodle_exception('error:batchinprogress', 'local_certificateimport');
+    }
+
+    if (!local_certificateimport_batch_has_ready_items($batchid)) {
+        throw new moodle_exception('error:batchreadyempty', 'local_certificateimport');
+    }
+
+    $batch->status = LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_PROCESSING;
+    $batch->timeupdated = time();
+    $DB->update_record('local_certimp_batches', $batch);
+
+    $template = local_certificateimport_get_template($batch->templateid);
+    $templateinstance = \tool_certificate\template::instance($template->id);
+    $items = $DB->get_records('local_certimp_items', ['batchid' => $batchid], 'id ASC');
+    $registrar = new \local_certificateimport\local\registrar($templateinstance);
+
+    return $registrar->register($batch, $items);
+}
+
+/**
+ * Resolves a human-friendly status for an imported certificate.
+ *
+ * @param int|null $issueid
+ * @param int|null $archived
+ * @return string One of queued, active, revoked, missing.
+ */
+function local_certificateimport_item_status(?int $issueid, ?int $archived): string {
+    if (empty($issueid)) {
+        return 'queued';
+    }
+    if ($archived === null) {
+        return 'missing';
+    }
+
+    return (int)$archived === 1 ? 'revoked' : 'active';
+}
+
+/**
+ * Maps a status code to a localized label.
+ *
+ * @param string $status
+ * @return string
+ */
+function local_certificateimport_item_status_label(string $status): string {
+    $component = 'local_certificateimport';
+    $identifier = 'issue:status:' . $status;
+    if (get_string_manager()->string_exists($identifier, $component)) {
+        return get_string($identifier, $component);
+    }
+
+    return $status;
+}
+
+/**
+ * Reissues revoked certificates for the selected import items.
+ *
+ * @param array<int> $itemids
+ * @return array{success:int, errors:int}
+ * @throws moodle_exception
+ */
+function local_certificateimport_reissue_items(array $itemids): array {
+    global $DB;
+
+    if (empty($itemids)) {
+        return ['success' => 0, 'errors' => 0];
+    }
+
+    if (!local_certificateimport_is_available()) {
+        throw new moodle_exception('status:unavailable:details', 'local_certificateimport');
+    }
+
+    [$sql, $params] = $DB->get_in_or_equal($itemids, SQL_PARAMS_NAMED);
+    $records = $DB->get_records_sql("
+        SELECT i.*, b.templateid, ti.archived
+          FROM {local_certimp_items} i
+          JOIN {local_certimp_batches} b ON b.id = i.batchid
+     LEFT JOIN {tool_certificate_issues} ti ON ti.id = i.issueid
+         WHERE i.id $sql
+    ", $params);
+
+    if (!$records) {
+        return ['success' => 0, 'errors' => 0];
+    }
+
+    $grouped = [];
+    foreach ($records as $record) {
+        $status = local_certificateimport_item_status($record->issueid ?? null, $record->archived ?? null);
+        if ($status !== 'revoked') {
+            continue;
+        }
+        if (empty($record->backgroundfileid)) {
+            continue;
+        }
+        $grouped[$record->templateid][] = $record;
+    }
+
+    $summary = ['success' => 0, 'errors' => 0];
+    foreach ($grouped as $templateid => $items) {
+        $template = local_certificateimport_get_template($templateid);
+        $templateinstance = \tool_certificate\template::instance($template->id);
+        $registrar = new \local_certificateimport\local\registrar($templateinstance);
+
+        foreach ($items as $item) {
+            try {
+                $issueid = $registrar->issue_certificate($item);
+                $item->issueid = $issueid;
+                $item->timeprocessed = time();
+                $DB->update_record('local_certimp_items', $item);
+                $summary['success']++;
+            } catch (moodle_exception $exception) {
+                debugging('local_certificateimport reissue failed: ' . $exception->getMessage(), DEBUG_DEVELOPER);
+                $summary['errors']++;
+            } catch (Throwable $throwable) {
+                debugging('local_certificateimport reissue failed: ' . $throwable->getMessage(), DEBUG_DEVELOPER);
+                $summary['errors']++;
+            }
+        }
+    }
+
+    return $summary;
 }
 
 /**
@@ -447,8 +672,6 @@ function local_certificateimport_get_template(int $templateid): stdClass {
  * @return string
  */
 function local_certificateimport_generate_issue_code(stdClass $user, stdClass $template): string {
-    global $DB;
-
     $issuecontext = (object)[
         'userid' => $user->id,
         'templateid' => $template->id,
@@ -466,19 +689,22 @@ function local_certificateimport_generate_issue_code(stdClass $user, stdClass $t
     }
 
     if (class_exists('\tool_certificate\certificate')) {
-        foreach (['generate_issue_code', 'generate_code', 'generate_unique_code'] as $method) {
-            $code = local_certificateimport_call_certificate_method('\tool_certificate\certificate', $method, $user, $template, $issuecontext);
+        $methods = ['generate_issue_code', 'generate_code', 'generate_unique_code'];
+        foreach ($methods as $method) {
+            $code = local_certificateimport_call_certificate_method(
+                '\tool_certificate\certificate',
+                $method,
+                $user,
+                $template,
+                $issuecontext
+            );
             if (is_string($code) && $code !== '') {
                 return local_certificateimport_trim_code($code);
             }
         }
     }
 
-    do {
-        $code = random_string(12);
-    } while ($DB->record_exists('tool_certificate_issues', ['code' => $code]));
-
-    return local_certificateimport_trim_code($code);
+    return local_certificateimport_generate_fallback_code($user, $template);
 }
 
 /**
@@ -492,6 +718,36 @@ function local_certificateimport_trim_code(string $code): string {
 }
 
 /**
+ * Generates a high-entropy fallback code without touching the database.
+ *
+ * The hash combines the template, user and random entropy, so generating codes for a CSV
+ * with thousands of rows no longer requires millions of full table scans on
+ * <code>tool_certificate_issues</code>, which in turn eliminates the 504 timeouts.
+ *
+ * @param stdClass $user
+ * @param stdClass $template
+ * @return string
+ */
+function local_certificateimport_generate_fallback_code(stdClass $user, stdClass $template): string {
+    try {
+        $random = bin2hex(random_bytes(8));
+    } catch (Throwable $throwable) {
+        $random = random_string(12);
+    }
+
+    $entropy = implode(':', [
+        $template->id,
+        $user->id,
+        microtime(true),
+        $random,
+    ]);
+
+    $hash = strtoupper(substr(hash('sha256', $entropy), 0, 32));
+
+    return local_certificateimport_trim_code('IMP-' . $hash);
+}
+
+/**
  * Attempts to call a static method on the Workplace certificate class.
  *
  * @param string $class
@@ -501,7 +757,13 @@ function local_certificateimport_trim_code(string $code): string {
  * @param stdClass $issuecontext
  * @return string
  */
-function local_certificateimport_call_certificate_method(string $class, string $method, stdClass $user, stdClass $template, stdClass $issuecontext): string {
+function local_certificateimport_call_certificate_method(
+    string $class,
+    string $method,
+    stdClass $user,
+    stdClass $template,
+    stdClass $issuecontext
+): string {
     if (!method_exists($class, $method)) {
         return '';
     }
@@ -530,7 +792,10 @@ function local_certificateimport_call_certificate_method(string $class, string $
 
         return (string)$reflection->invokeArgs(null, $args);
     } catch (Throwable $throwable) {
-        debugging('local_certificateimport: Unable to call certificate generator: ' . $throwable->getMessage(), DEBUG_DEVELOPER);
+        debugging(
+            'local_certificateimport: Unable to call certificate generator: ' . $throwable->getMessage(),
+            DEBUG_DEVELOPER
+        );
         return '';
     }
 }

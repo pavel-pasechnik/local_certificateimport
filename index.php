@@ -37,16 +37,48 @@ $PAGE->set_heading(get_string('pluginname', 'local_certificateimport'));
 require_once($CFG->libdir . '/filelib.php');
 require_once($CFG->libdir . '/csvlib.class.php');
 
+$action = optional_param('action', '', PARAM_ALPHA);
+$batchid = optional_param('batchid', 0, PARAM_INT);
 $download = optional_param('download', '', PARAM_ALPHA);
 
 $templateoptions = local_certificateimport_get_template_options();
 
 $sessionresults = $SESSION->local_certificateimport_lastresults ?? [];
+if ($action === 'register' && $batchid) {
+    require_sesskey();
+    if (!local_certificateimport_is_available()) {
+        redirect(
+            $PAGE->url,
+            get_string('status:unavailable:details', 'local_certificateimport'),
+            0,
+            \core\output\notification::NOTIFY_WARNING
+        );
+    }
+    try {
+        $summary = local_certificateimport_register_batch($batchid);
+        $summarydata = (object)[
+            'success' => $summary['success'],
+            'errors' => $summary['errors'],
+        ];
+        \core\notification::success(get_string('batch:register:success', 'local_certificateimport', $summarydata));
+    } catch (moodle_exception $exception) {
+        \core\notification::error($exception->getMessage());
+    } catch (Throwable $throwable) {
+        \core\notification::error(get_string('error:unexpected', 'local_certificateimport', $throwable->getMessage()));
+    }
+    redirect($PAGE->url);
+}
+
+$sessionresults = $SESSION->local_certificateimport_lastresults ?? [];
 if ($download === 'csv') {
     require_sesskey();
     if (empty($sessionresults)) {
-        redirect($PAGE->url, get_string('result:export:empty', 'local_certificateimport'), 0,
-            \core\output\notification::NOTIFY_WARNING);
+        redirect(
+            $PAGE->url,
+            get_string('result:export:empty', 'local_certificateimport'),
+            0,
+            \core\output\notification::NOTIFY_WARNING
+        );
     }
 
     $csv = new csv_export_writer();
@@ -112,11 +144,11 @@ if ($mform->is_cancelled()) {
 
         $results = local_certificateimport_run_import($csvpath, $pdfdir, $template);
 
-        $imported = count(array_filter($results, static function (array $row): bool {
-            return $row['status'] === 'imported';
+        $queued = count(array_filter($results, static function (array $row): bool {
+            return $row['status'] === LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED;
         }));
         $summary = (object)[
-            'imported' => $imported,
+            'ready' => $queued,
             'total' => count($results),
         ];
         \core\notification::success(get_string('result:summary', 'local_certificateimport', $summary));
@@ -134,6 +166,8 @@ if (!empty($results)) {
 } else {
     unset($SESSION->local_certificateimport_lastresults);
 }
+
+$batches = local_certificateimport_get_recent_batches();
 
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('pagetitle', 'local_certificateimport'));
@@ -158,7 +192,14 @@ $templatelink = html_writer::link($templateurl, get_string('page:csvtemplate', '
     'class' => 'btn btn-secondary',
     'role' => 'button',
 ]);
-echo html_writer::div($templatelink, 'mb-4');
+echo html_writer::div($templatelink, 'mb-2');
+
+$reporturl = new moodle_url('/local/certificateimport/report.php');
+$reportlink = html_writer::link($reporturl, get_string('report:menu', 'local_certificateimport'), [
+    'class' => 'btn btn-outline-secondary',
+    'role' => 'button',
+]);
+echo html_writer::div($reportlink, 'mb-4');
 $mform->display();
 
 echo $OUTPUT->heading(get_string('report:title', 'local_certificateimport'), 3);
@@ -199,6 +240,58 @@ if (!empty($results)) {
     echo html_writer::table($table);
 } else {
     echo html_writer::div(get_string('result:none', 'local_certificateimport'), 'alert alert-secondary');
+}
+
+echo $OUTPUT->heading(get_string('batch:list:title', 'local_certificateimport'), 3);
+if (empty($batches)) {
+    echo html_writer::div(get_string('batch:none', 'local_certificateimport'), 'alert alert-secondary');
+} else {
+    $batchtable = new html_table();
+    $batchtable->attributes['class'] = 'generaltable certimport-batches';
+    $batchtable->head = [
+        get_string('batch:table:template', 'local_certificateimport'),
+        get_string('batch:table:created', 'local_certificateimport'),
+        get_string('batch:table:status', 'local_certificateimport'),
+        get_string('batch:table:queued', 'local_certificateimport'),
+        get_string('batch:table:registered', 'local_certificateimport'),
+        get_string('batch:table:errors', 'local_certificateimport'),
+        get_string('batch:table:actions', 'local_certificateimport'),
+    ];
+
+    foreach ($batches as $batch) {
+        $templatename = format_string($batch->templatename, true, ['contextid' => $batch->templatecontextid]);
+        $statuslabel = get_string('batch:status:' . $batch->status, 'local_certificateimport');
+        $queued = $batch->items_ready . ' / ' . $batch->items_total;
+        $registered = $batch->items_registered;
+        $errors = $batch->items_errors;
+
+        $actioncell = '';
+        if ((int)$batch->items_ready > 0 && $batch->status !== LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_PROCESSING) {
+            $registerurl = new moodle_url('/local/certificateimport/index.php', [
+                'action' => 'register',
+                'batchid' => $batch->id,
+                'sesskey' => sesskey(),
+            ]);
+            $button = new \core\output\single_button($registerurl, get_string('batch:register', 'local_certificateimport'));
+            $button->method = 'post';
+            $button->add_confirm_action(new \core\output\confirm_action(
+                get_string('batch:register:confirm', 'local_certificateimport')
+            ));
+            $actioncell = $OUTPUT->render($button);
+        }
+
+        $batchtable->data[] = [
+            $templatename,
+            userdate($batch->timecreated),
+            html_writer::span($statuslabel, 'status-label status-' . $batch->status),
+            $queued,
+            $registered,
+            $errors,
+            $actioncell,
+        ];
+    }
+
+    echo html_writer::table($batchtable);
 }
 
 echo $OUTPUT->footer();

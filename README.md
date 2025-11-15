@@ -14,9 +14,10 @@
 - 📝 One-click CSV template download so column order and sample data are ready.
 - 🎯 Pick the destination certificate template from a dropdown instead of memorising template IDs.
 - 🔢 Certificate numbers are generated automatically by the official `tool_certificate` component, so the CSV `code` column can stay empty.
-- 📁 Automatically extracts PDFs, creates missing records in `tool_certificate_issues`, and stores files via the Moodle file API.
-- 🔁 Idempotent: updates existing issues (code/time) and replaces stored PDFs when needed.
-- 📊 Generates an import report showing *User → Code → Status* with “Imported / File not found / Error”.
+- 📁 Automatically extracts PDFs, converts them to JPEG backgrounds, and stores the images via the Moodle file API (no original PDFs kept).
+- 🔁 Issues are created via the standard `tool_certificate` API during the “Register certificates” step, so numbering, notifications, and reports stay native.
+- ⏱️ Batches decouple the heavy ZIP import from the registration phase, so you can prepare multiple uploads and trigger issuance when ready.
+- 📊 Built-in report lists every imported certificate with filtering (template/user/status/date), pagination, CSV export, and the ability to reissue revoked entries in bulk.
 - 🔐 Respects the dedicated capability `local/certificateimport:import` so you can delegate the task without giving full site admin access.
 
 ---
@@ -27,7 +28,8 @@
 2. Run the Moodle upgrade script: `php admin/cli/upgrade.php`.
 3. (Optional) Purge caches: `php admin/cli/purge_caches.php`.
 
-The plugin requires Moodle 4.5 (2024041900) or newer and the official `tool_certificate` component.
+The plugin requires Moodle 4.5 (2024041900) or newer and the official `tool_certificate` component.  
+PDF conversion depends on the Imagick PHP extension (recommended) or the ImageMagick CLI tool `convert`.
 
 ---
 
@@ -38,8 +40,9 @@ The plugin requires Moodle 4.5 (2024041900) or newer and the official `tool_cert
    - CSV file: UTF‑8, comma separator, header optional, columns → `userid,filename,timecreated` (the `timecreated` column is optional and may stay blank).
    - ZIP archive: contains every PDF referenced in the CSV `filename` column.
    - Need a sample? Use the **Download CSV template** button on the page.
-3. Click **Import certificates**.
-4. Review the on-page report (and use the **Export CSV** button if you need a copy). You can also cross-check results via `tool/certificate/index.php`.
+3. Click **Import certificates** — the plugin extracts the ZIP, converts PDFs to JPEG files, and queues them for registration.
+4. Scroll down to **Import batches** and press **Register certificates** for the desired batch when you want to issue the certificates via `tool_certificate`. The official plugin handles numbering, PDF generation, and notifications at that stage.
+5. Review both the on-page report (you can still **Export CSV**) and the batch table to see which certificates are queued, registered, or failed.
 
 ### CSV tips
 
@@ -53,7 +56,8 @@ The plugin requires Moodle 4.5 (2024041900) or newer and the official `tool_cert
 
 - Only PDF files are imported; other files are ignored.
 - Filenames are matched case-insensitively. If the CSV contains a path (`subdir/file.pdf`) it will be matched as well.
-- Each PDF is attached to the `tool_certificate` file area (`component=tool_certificate`, `filearea=issues`).
+- PDFs are deleted after conversion; only the generated JPEG background is stored until the registration step.
+- The final certificates (PDF) are produced by `tool_certificate` and stored in its native file area.
 
 ---
 
@@ -71,6 +75,9 @@ Grant this capability to trusted roles if you need to delegate certificate uploa
 
 - Business logic lives in `lib.php` (`local_certificateimport_run_import()` and helpers).
 - The upload form is defined in `classes/form/import_form.php`.
+- PDF conversion helper: `classes/local/converter.php`.
+- Registration workflow: `classes/local/registrar.php`.
+- Import batches/items are stored in `local_certimp_batches` and `local_certimp_items`.
 - Custom capability: `db/access.php`.
 - Upgrade steps: `db/upgrade.php`.
 - Privacy provider: `classes/privacy/provider.php` (no extra data stored).
@@ -82,3 +89,4 @@ Contributions and issues are welcome!
 ## License
 
 GNU GPL v3 © 2025 Pavel Pasechnik
+- To inspect previous uploads, open **Site administration → Certificates → Imported certificates report** (or `/local/certificateimport/report.php`). You can filter by template, status, user or date, export the visible rows to CSV, and reissue any revoked certificates directly from this screen.

@@ -73,5 +73,60 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
     }
 
+    if ($oldversion < 2025111500) {
+        $batches = new xmldb_table('local_certimp_batches');
+        if (!$dbman->table_exists($batches)) {
+            $batches->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+            $batches->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+            $batches->add_field('createdby', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+            $batches->add_field('status', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'pending');
+            $batches->add_field('totalitems', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0);
+            $batches->add_field('processeditems', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0);
+            $batches->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0);
+            $batches->add_field('timeupdated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0);
+            $batches->add_field('timeregistered', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0);
+
+            $batches->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+            $batches->add_index('template_idx', XMLDB_INDEX_NOTUNIQUE, ['templateid']);
+            $batches->add_index('status_idx', XMLDB_INDEX_NOTUNIQUE, ['status']);
+
+            $dbman->create_table($batches);
+        }
+
+        $items = new xmldb_table('local_certimp_items');
+        if (!$dbman->table_exists($items)) {
+            $items->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+            $items->add_field('batchid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+            $items->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+            $items->add_field('filename', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, '');
+            $items->add_field('csvline', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0);
+            $items->add_field('backgroundfileid', XMLDB_TYPE_INTEGER, '10', null);
+            $items->add_field('issueid', XMLDB_TYPE_INTEGER, '10', null);
+            $items->add_field('status', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'queued');
+            $items->add_field('issuetime', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0);
+            $items->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0);
+            $items->add_field('timeprocessed', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0);
+
+            $items->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+            $items->add_index('batch_idx', XMLDB_INDEX_NOTUNIQUE, ['batchid']);
+            $items->add_index('user_idx', XMLDB_INDEX_NOTUNIQUE, ['userid']);
+            $items->add_index('status_idx', XMLDB_INDEX_NOTUNIQUE, ['status']);
+
+            $dbman->create_table($items);
+        }
+
+        upgrade_plugin_savepoint(true, 2025111500, 'local', 'certificateimport');
+    }
+
+    if ($oldversion < 2025111501) {
+        $items = new xmldb_table('local_certimp_items');
+        $field = new xmldb_field('errormessage');
+        if ($dbman->field_exists($items, $field)) {
+            $dbman->drop_field($items, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2025111501, 'local', 'certificateimport');
+    }
+
     return true;
 }
