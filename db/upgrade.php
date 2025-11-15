@@ -32,7 +32,7 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
     global $DB;
     $dbman = $DB->get_manager();
 
-    if ($oldversion < 2025111200) {
+    if ($oldversion < 2025111500) {
         $table = new xmldb_table('local_certificateimport_log');
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
         $table->add_field('issueid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
@@ -52,15 +52,15 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
+        upgrade_plugin_savepoint(true, 2025111500, 'local', 'certificateimport');
     }
 
-    if ($oldversion < 2025111200) {
+    if ($oldversion < 2025111500) {
         // Reserved for observer/original-file storage upgrade.
-        upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
+        upgrade_plugin_savepoint(true, 2025111500, 'local', 'certificateimport');
     }
 
-    if ($oldversion < 2025111200) {
+    if ($oldversion < 2025111500) {
         $table = new xmldb_table('local_certificateimport_log');
         if ($dbman->table_exists($table)) {
             $dbman->drop_table($table);
@@ -70,7 +70,7 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
         $systemcontext = context_system::instance();
         $fs->delete_area_files($systemcontext->id, 'local_certificateimport', 'originals');
 
-        upgrade_plugin_savepoint(true, 2025111200, 'local', 'certificateimport');
+        upgrade_plugin_savepoint(true, 2025111500, 'local', 'certificateimport');
     }
 
     if ($oldversion < 2025111500) {
@@ -118,14 +118,14 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025111500, 'local', 'certificateimport');
     }
 
-    if ($oldversion < 2025111501) {
+    if ($oldversion < 2025111500) {
         $items = new xmldb_table('local_certimp_items');
         $field = new xmldb_field('errormessage');
         if ($dbman->field_exists($items, $field)) {
             $dbman->drop_field($items, $field);
         }
 
-        upgrade_plugin_savepoint(true, 2025111501, 'local', 'certificateimport');
+        upgrade_plugin_savepoint(true, 2025111500, 'local', 'certificateimport');
     }
 
     return true;
