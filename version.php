@@ -31,4 +31,5 @@ $plugin->requires  = 2022041900.00;
 $plugin->source = 'https://github.com/pavel-pasechnik/local_certificateimport';
 $plugin->dependencies = [
     'tool_certificate' => 2025031804,
+    'certificateelement_certificat' => 2025111500,
 ];
