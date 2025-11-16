@@ -87,6 +87,7 @@ $string['error:converterimagick'] = 'Imagick was unable to convert the PDF: {$a}
 $string['error:convertercli'] = 'ImageMagick CLI could not convert the PDF (exit code {$a}).';
 $string['error:converterpdftoppm'] = 'pdftoppm could not convert the PDF (exit code {$a}).';
 $string['error:convertergs'] = 'Ghostscript could not convert the PDF (exit code {$a}).';
+$string['error:convertersmissing'] = 'PDF conversion requires one of the following tools: {$a}. Install at least one of them and try again.';
 $string['error:unexpected'] = 'Unexpected error: {$a}';
 
 $string['status:available'] = 'Available';
@@ -134,9 +135,13 @@ $string['settings:ghostscript'] = 'Ghostscript';
 $string['settings:ghostscript_desc'] = 'Ghostscript (gs) is the fallback PDF converter. Install the "ghostscript" package so the plugin can locate /usr/bin/gs (or the platform equivalent).';
 $string['settings:binary:available'] = 'Available ({$a})';
 $string['settings:binary:missing'] = 'Not detected on the server.';
+$string['converter:imagick'] = 'Imagick PHP extension';
+$string['converter:convert'] = 'ImageMagick CLI (convert)';
+$string['converter:pdftoppm'] = 'pdftoppm (Poppler)';
+$string['converter:ghostscript'] = 'Ghostscript (gs)';
 
 $string['report:issues:title'] = 'Imported certificates';
-$string['report:issues:description'] = 'Browse every certificate queued or issued through the importer, filter by template/status/date, export to CSV, reissue revoked records, delete revoked/not-issued entries, and open background previews.';
+$string['report:issues:description'] = 'Browse every certificate queued or issued through the importer, filter by template/status/date, export to CSV, reissue revoked/not-issued entries, delete records, and open background previews.';
 $string['report:menu'] = 'Imported certificates report';
 $string['report:col:number'] = '#';
 $string['report:col:preview'] = 'Preview';

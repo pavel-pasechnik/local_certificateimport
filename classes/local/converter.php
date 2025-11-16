@@ -57,20 +57,20 @@ class converter {
             throw new moodle_exception('error:csvread', 'local_certificateimport');
         }
 
-        if (extension_loaded('imagick')) {
-            return $this->convert_with_imagick($pdfpath);
-        }
-
-        if ($this->has_cli_convert()) {
-            return $this->convert_with_cli($pdfpath);
-        }
-
         if ($this->has_pdftoppm()) {
             return $this->convert_with_pdftoppm($pdfpath);
         }
 
         if ($this->has_ghostscript()) {
             return $this->convert_with_ghostscript($pdfpath);
+        }
+
+        if (extension_loaded('imagick')) {
+            return $this->convert_with_imagick($pdfpath);
+        }
+
+        if ($this->has_cli_convert()) {
+            return $this->convert_with_cli($pdfpath);
         }
 
         throw new moodle_exception('error:convertermissing', 'local_certificateimport');
@@ -88,13 +88,11 @@ class converter {
             $imagick = new \Imagick();
             $imagick->setResolution($this->dpi, $this->dpi);
             $imagick->readImage($pdfpath . '[0]');
-            $imagick->setImageFormat('jpeg');
-            $imagick->setImageCompression(\Imagick::COMPRESSION_JPEG);
-            $imagick->setImageCompressionQuality(90);
+            $imagick->setImageFormat('png');
             $imagick->setBackgroundColor('white');
             $imagick->mergeImageLayers(\Imagick::LAYERMETHOD_FLATTEN);
 
-            $target = $this->generate_temp_jpeg();
+            $target = $this->generate_temp_png();
             $imagick->writeImage($target);
             $imagick->clear();
             $imagick->destroy();
@@ -113,14 +111,13 @@ class converter {
      * @throws moodle_exception
      */
     protected function convert_with_cli(string $pdfpath): string {
-        $target = $this->generate_temp_jpeg();
+        $target = $this->generate_temp_png();
         $escapedsource = escapeshellarg($pdfpath . '[0]');
         $escapedtarget = escapeshellarg($target);
         $command = implode(' ', [
             escapeshellcmd($this->get_convert_binary()),
             '-density ' . (int)$this->dpi,
             $escapedsource,
-            '-quality 90',
             $escapedtarget,
         ]);
 
@@ -141,12 +138,12 @@ class converter {
      * @throws moodle_exception
      */
     protected function convert_with_pdftoppm(string $pdfpath): string {
-        $target = $this->generate_temp_jpeg();
-        $prefix = preg_replace('/\.jpg$/', '', $target);
+        $target = $this->generate_temp_png();
+        $prefix = preg_replace('/\.png$/', '', $target);
         $command = implode(' ', [
             escapeshellcmd($this->get_pdftoppm_binary()),
             '-singlefile',
-            '-jpeg',
+            '-png',
             '-r ' . (int)$this->dpi,
             '-f 1',
             '-l 1',
@@ -171,7 +168,7 @@ class converter {
      * @throws moodle_exception
      */
     protected function convert_with_ghostscript(string $pdfpath): string {
-        $target = $this->generate_temp_jpeg();
+        $target = $this->generate_temp_png();
         $command = implode(' ', [
             escapeshellcmd($this->get_ghostscript_binary()),
             '-dSAFER',
@@ -179,8 +176,9 @@ class converter {
             '-dNOPAUSE',
             '-dFirstPage=1',
             '-dLastPage=1',
-            '-sDEVICE=jpeg',
-            '-dJPEGQ=90',
+            '-sDEVICE=png16m',
+            '-dTextAlphaBits=4',
+            '-dGraphicsAlphaBits=4',
             '-r' . (int)$this->dpi,
             '-sOutputFile=' . escapeshellarg($target),
             escapeshellarg($pdfpath),
@@ -200,9 +198,9 @@ class converter {
      *
      * @return string
      */
-    protected function generate_temp_jpeg(): string {
+    protected function generate_temp_png(): string {
         $tempdir = make_temp_directory('local_certificateimport');
-        return $tempdir . '/' . time() . '_' . random_string(8) . '.jpg';
+        return $tempdir . '/' . time() . '_' . random_string(8) . '.png';
     }
 
     /**
@@ -238,21 +236,7 @@ class converter {
      * @return string
      */
     protected function get_convert_binary(): string {
-        $paths = ['/usr/bin/convert', '/usr/local/bin/convert'];
-        foreach ($paths as $path) {
-            if (is_executable($path)) {
-                return $path;
-            }
-        }
-
-        $output = [];
-        $code = 0;
-        @exec('command -v convert', $output, $code);
-        if ($code === 0 && !empty($output[0])) {
-            return trim($output[0]);
-        }
-
-        return '';
+        return \local_certificateimport_find_imagemagick_convert_path();
     }
 
     /**
@@ -261,7 +245,7 @@ class converter {
      * @return string
      */
     protected function get_pdftoppm_binary(): string {
-        return local_certificateimport_find_pdftoppm_path();
+        return \local_certificateimport_find_pdftoppm_path();
     }
 
     /**
@@ -270,6 +254,6 @@ class converter {
      * @return string
      */
     protected function get_ghostscript_binary(): string {
-        return local_certificateimport_find_ghostscript_path();
+        return \local_certificateimport_find_ghostscript_path();
     }
 }

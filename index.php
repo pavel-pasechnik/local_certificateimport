@@ -111,9 +111,17 @@ $mform = new \local_certificateimport\form\import_form(null, [
 ]);
 $results = [];
 
+$converterstatus = local_certificateimport_get_converter_status();
+$converterready = local_certificateimport_has_converter($converterstatus);
+$missingconvertermessage = '';
+if (!$converterready) {
+    $missinglabels = local_certificateimport_get_missing_converter_labels($converterstatus);
+    $missingconvertermessage = get_string('error:convertersmissing', 'local_certificateimport', implode(', ', $missinglabels));
+}
+
 if ($mform->is_cancelled()) {
     redirect($PAGE->url);
-} else if ($data = $mform->get_data()) {
+} else if ($converterready && ($data = $mform->get_data())) {
     $tempdirname = 'local_certificateimport/' . time() . '_' . random_string(6);
     $tempdir = make_temp_directory($tempdirname);
     $pdfdir = $tempdir . '/pdf';
@@ -168,6 +176,10 @@ if ($mform->is_cancelled()) {
     } finally {
         fulldelete($tempdir);
     }
+} else if (!$converterready && optional_param('submitbutton', null, PARAM_RAW) !== null) {
+    \core\notification::error(
+        $missingconvertermessage ?: get_string('error:convertersmissing', 'local_certificateimport', implode(', ', local_certificateimport_get_missing_converter_labels($converterstatus)))
+    );
 }
 
 if (!empty($results)) {
@@ -201,6 +213,10 @@ $templatelink = html_writer::link($templateurl, get_string('page:csvtemplate', '
     'role' => 'button',
 ]);
 echo html_writer::div($templatelink, 'mb-2');
+
+if (!$converterready) {
+    echo $OUTPUT->notification($missingconvertermessage, \core\output\notification::NOTIFY_ERROR);
+}
 
 $mform->display();
 

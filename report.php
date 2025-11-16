@@ -123,6 +123,14 @@ if ($table->is_downloading()) {
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('report:issues:title', 'local_certificateimport'));
 echo html_writer::div(get_string('report:issues:description', 'local_certificateimport'), 'alert alert-info');
+$reportconverterstatus = local_certificateimport_get_converter_status();
+if (!local_certificateimport_has_converter($reportconverterstatus)) {
+    $missinglabels = local_certificateimport_get_missing_converter_labels($reportconverterstatus);
+    echo $OUTPUT->notification(
+        get_string('error:convertersmissing', 'local_certificateimport', implode(', ', $missinglabels)),
+        \core\output\notification::NOTIFY_ERROR
+    );
+}
 
 $filterform->display();
 

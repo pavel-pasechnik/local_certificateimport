@@ -65,6 +65,34 @@ if (!defined('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXARCHIVESIZE_MB')) {
 }
 
 /**
+ * Returns the detected ImageMagick convert binary path or empty string.
+ *
+ * @return string
+ */
+function local_certificateimport_find_imagemagick_convert_path(): string {
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $paths = ['/usr/bin/convert', '/usr/local/bin/convert'];
+    foreach ($paths as $path) {
+        if (is_executable($path)) {
+            return $cached = $path;
+        }
+    }
+
+    $output = [];
+    $code = 0;
+    @exec('command -v convert', $output, $code);
+    if ($code === 0 && !empty($output[0])) {
+        return $cached = trim($output[0]);
+    }
+
+    return $cached = '';
+}
+
+/**
  * Returns the detected pdftoppm binary path or empty string.
  *
  * @return string
@@ -132,6 +160,77 @@ function local_certificateimport_get_max_records(): int {
     }
 
     return max(0, (int)$value);
+}
+
+/**
+ * Returns current converter availability map.
+ *
+ * @return array<string, bool>
+ */
+function local_certificateimport_get_converter_status(): array {
+    return [
+        'pdftoppm' => local_certificateimport_find_pdftoppm_path() !== '',
+        'ghostscript' => local_certificateimport_find_ghostscript_path() !== '',
+        'imagick' => extension_loaded('imagick'),
+        'convert' => local_certificateimport_find_imagemagick_convert_path() !== '',
+    ];
+}
+
+/**
+ * Whether at least one converter is available.
+ *
+ * @param array<string, bool>|null $status
+ * @return bool
+ */
+function local_certificateimport_has_converter(?array $status = null): bool {
+    if ($status === null) {
+        $status = local_certificateimport_get_converter_status();
+    }
+
+    foreach ($status as $key => $available) {
+        if ($available) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Returns human-readable labels for converters.
+ *
+ * @return array<string, string>
+ */
+function local_certificateimport_get_converter_labels(): array {
+    return [
+        'pdftoppm' => get_string('converter:pdftoppm', 'local_certificateimport'),
+        'ghostscript' => get_string('converter:ghostscript', 'local_certificateimport'),
+        'imagick' => get_string('converter:imagick', 'local_certificateimport'),
+        'convert' => get_string('converter:convert', 'local_certificateimport'),
+        'zip' => get_string('converter:zip', 'local_certificateimport'),
+    ];
+}
+
+/**
+ * Returns labels for missing converters.
+ *
+ * @param array<string, bool>|null $status
+ * @return array<int, string>
+ */
+function local_certificateimport_get_missing_converter_labels(?array $status = null): array {
+    if ($status === null) {
+        $status = local_certificateimport_get_converter_status();
+    }
+
+    $labels = local_certificateimport_get_converter_labels();
+    $missing = [];
+    foreach ($status as $key => $available) {
+        if (empty($available) && isset($labels[$key])) {
+            $missing[] = $labels[$key];
+        }
+    }
+
+    return $missing;
 }
 
 /**

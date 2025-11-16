@@ -87,6 +87,7 @@ $string['error:converterimagick'] = 'Imagick не смог конвертиро�
 $string['error:convertercli'] = 'ImageMagick не смог конвертировать PDF (код {$a}).';
 $string['error:converterpdftoppm'] = 'pdftoppm не смог конвертировать PDF (код {$a}).';
 $string['error:convertergs'] = 'Ghostscript не смог конвертировать PDF (код {$a}).';
+$string['error:convertersmissing'] = 'Для конвертации PDF необходим хотя бы один из инструментов: {$a}. Установите любую из этих библиотек и повторите попытку.';
 $string['error:unexpected'] = 'Непредвиденная ошибка: {$a}';
 
 $string['status:available'] = 'Доступен';
@@ -134,6 +135,10 @@ $string['settings:ghostscript'] = 'Ghostscript';
 $string['settings:ghostscript_desc'] = 'Ghostscript (gs) служит запасным конвертером PDF. Установите пакет «ghostscript», чтобы система находила /usr/bin/gs (или путь вашей платформы).';
 $string['settings:binary:available'] = 'Доступно ({$a})';
 $string['settings:binary:missing'] = 'Не найдено на сервере.';
+$string['converter:imagick'] = 'PHP-расширение Imagick';
+$string['converter:convert'] = 'CLI ImageMagick (convert)';
+$string['converter:pdftoppm'] = 'pdftoppm (Poppler)';
+$string['converter:ghostscript'] = 'Ghostscript (gs)';
 
 $string['report:issues:title'] = 'Импортированные сертификаты';
 $string['report:issues:description'] = 'Просматривайте все сертификаты, импортированные через плагин, фильтруйте по шаблону/статусу/дате, экспортируйте в CSV, переиздавайте отозванные записи, удаляйте отозванные/не выпущенные записи и открывайте превью фона.';
