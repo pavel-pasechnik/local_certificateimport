@@ -261,6 +261,11 @@ class converter {
      * @return string
      */
     protected function get_pdftoppm_binary(): string {
+        $configured = trim((string)get_config('local_certificateimport', 'pdftoppmpath'));
+        if ($configured !== '' && is_executable($configured)) {
+            return $configured;
+        }
+
         $paths = ['/usr/bin/pdftoppm', '/usr/local/bin/pdftoppm'];
         foreach ($paths as $path) {
             if (is_executable($path)) {
@@ -284,6 +289,11 @@ class converter {
      * @return string
      */
     protected function get_ghostscript_binary(): string {
+        $configured = trim((string)get_config('local_certificateimport', 'ghostscriptpath'));
+        if ($configured !== '' && is_executable($configured)) {
+            return $configured;
+        }
+
         $paths = ['/usr/bin/gs', '/usr/local/bin/gs'];
         foreach ($paths as $path) {
             if (is_executable($path)) {

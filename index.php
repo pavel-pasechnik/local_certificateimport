@@ -157,14 +157,10 @@ if ($mform->is_cancelled()) {
 
         $results = local_certificateimport_run_import($csvpath, $pdfdir, $template);
 
-        $queued = count(array_filter($results, static function (array $row): bool {
-            return $row['status'] === LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED;
-        }));
         $summary = (object)[
-            'ready' => $queued,
             'total' => count($results),
         ];
-        \core\notification::success(get_string('result:summary', 'local_certificateimport', $summary));
+        \core\notification::success(get_string('result:summary:converting', 'local_certificateimport', $summary));
     } catch (moodle_exception $exception) {
         \core\notification::error($exception->getMessage());
     } catch (Throwable $throwable) {

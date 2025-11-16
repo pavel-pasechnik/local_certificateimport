@@ -68,5 +68,21 @@ if ($hassiteconfig) {
         PARAM_INT
     ));
 
+    $settingspage->add(new admin_setting_configtext(
+        'local_certificateimport/pdftoppmpath',
+        get_string('settings:pdftoppmpath', 'local_certificateimport'),
+        get_string('settings:pdftoppmpath_desc', 'local_certificateimport'),
+        '',
+        PARAM_RAW_TRIMMED
+    ));
+
+    $settingspage->add(new admin_setting_configtext(
+        'local_certificateimport/ghostscriptpath',
+        get_string('settings:ghostscriptpath', 'local_certificateimport'),
+        get_string('settings:ghostscriptpath_desc', 'local_certificateimport'),
+        '',
+        PARAM_RAW_TRIMMED
+    ));
+
     $ADMIN->add($category, $settingspage);
 }

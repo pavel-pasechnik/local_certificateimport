@@ -54,11 +54,14 @@ if (!defined('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR')) {
 if (!defined('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_REGISTERED')) {
     define('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_REGISTERED', 'registered');
 }
+if (!defined('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_CONVERTING')) {
+    define('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_CONVERTING', 'converting');
+}
 if (!defined('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXRECORDS')) {
-    define('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXRECORDS', 100);
+    define('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXRECORDS', 50);
 }
 if (!defined('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXARCHIVESIZE_MB')) {
-    define('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXARCHIVESIZE_MB', 50);
+    define('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXARCHIVESIZE_MB', 200);
 }
 
 /**
@@ -102,7 +105,7 @@ function local_certificateimport_run_import(string $csvpath, string $pdfdir, std
 
     $records = local_certificateimport_parse_csv($csvpath);
     $fileindex = local_certificateimport_build_file_index($pdfdir);
-    $converter = new \local_certificateimport\local\converter();
+    $userscache = local_certificateimport_preload_users($records);
     $now = time();
 
     $batch = (object)[
@@ -120,7 +123,7 @@ function local_certificateimport_run_import(string $csvpath, string $pdfdir, std
     $results = [];
     foreach ($records as $record) {
         $record['templateid'] = $template->id;
-        $results[] = local_certificateimport_stage_record($record, $fileindex, $template, $batch->id, $converter);
+        $results[] = local_certificateimport_stage_record($record, $fileindex, $template, $batch->id, $userscache);
     }
 
     return $results;
@@ -183,6 +186,30 @@ function local_certificateimport_parse_csv(string $csvpath): array {
 }
 
 /**
+ * Preloads Moodle user records referenced in the CSV.
+ *
+ * @param array $records
+ * @return array<int, stdClass>
+ */
+function local_certificateimport_preload_users(array $records): array {
+    global $DB;
+
+    $ids = [];
+    foreach ($records as $record) {
+        if (!empty($record['userid'])) {
+            $ids[] = (int)$record['userid'];
+        }
+    }
+
+    $ids = array_values(array_unique(array_filter($ids)));
+    if (empty($ids)) {
+        return [];
+    }
+
+    return $DB->get_records_list('user', 'id', $ids);
+}
+
+/**
  * Processes a single CSV record.
  *
  * @param array $record Normalized CSV record.
@@ -196,7 +223,7 @@ function local_certificateimport_stage_record(
     array $fileindex,
     stdClass $template,
     int $batchid,
-    \local_certificateimport\local\converter $converter
+    array $userscache = []
 ): array {
     global $DB;
 
@@ -211,6 +238,7 @@ function local_certificateimport_stage_record(
         'csvline' => $record['line'],
         'status' => LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR,
         'backgroundfileid' => null,
+        'sourcefileid' => null,
         'issueid' => null,
         'issuetime' => $record['timecreated'] ?? 0,
         'timecreated' => $now,
@@ -229,6 +257,7 @@ function local_certificateimport_stage_record(
         'itemid' => $item->id,
         'backgroundfileid' => null,
         'previewurl' => '',
+        'sourcefileid' => null,
     ];
 
     try {
@@ -236,7 +265,7 @@ function local_certificateimport_stage_record(
             throw new moodle_exception('error:csvcolumns', 'local_certificateimport', '', $record['line']);
         }
 
-        $user = $DB->get_record('user', ['id' => $record['userid']]);
+        $user = $userscache[$record['userid']] ?? $DB->get_record('user', ['id' => $record['userid']]);
         if (!$user) {
             throw new moodle_exception('error:usernotfound', 'local_certificateimport', '', $record['userid']);
         }
@@ -259,24 +288,24 @@ function local_certificateimport_stage_record(
             return $result;
         }
 
-        $jpegpath = $converter->convert($filepath);
-        $jpgname = pathinfo($storedfilename, PATHINFO_FILENAME) . '.jpg';
-        $storedfile = $fs->create_file_from_pathname([
+        $sourcefile = $fs->create_file_from_pathname([
             'contextid' => $context->id,
             'component' => 'local_certificateimport',
-            'filearea' => 'backgrounds',
+            'filearea' => 'sources',
             'itemid' => $item->id,
             'filepath' => '/',
-            'filename' => $jpgname,
-        ], $jpegpath);
-        @unlink($jpegpath);
+            'filename' => $storedfilename,
+        ], $filepath);
 
-        $item->backgroundfileid = $storedfile->get_id();
-        $item->status = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED;
+        $item->sourcefileid = $sourcefile->get_id();
+        $item->status = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_CONVERTING;
         $DB->update_record('local_certimp_items', $item);
 
-        $result['status'] = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED;
-        $result['message'] = get_string('result:message:queued', 'local_certificateimport');
+        $result['status'] = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_CONVERTING;
+        $result['message'] = get_string('result:message:converting', 'local_certificateimport');
+        $result['sourcefileid'] = $item->sourcefileid;
+
+        local_certificateimport_queue_conversion_task($item->id);
         $result['backgroundfileid'] = $item->backgroundfileid;
         if ($previewurl = local_certificateimport_get_background_preview_url($item->backgroundfileid)) {
             $result['previewurl'] = $previewurl->out(false);
@@ -295,6 +324,89 @@ function local_certificateimport_stage_record(
     }
 
     return $result;
+}
+
+/**
+ * Queues an adhoc task to convert the staged PDF into a JPEG background.
+ *
+ * @param int $itemid
+ * @return void
+ */
+function local_certificateimport_queue_conversion_task(int $itemid): void {
+    \local_certificateimport\task\convert_background_task::requeue($itemid);
+}
+
+/**
+ * Converts a staged certificate item and stores the JPEG background.
+ *
+ * @param int $itemid
+ * @return void
+ * @throws moodle_exception When the source file is missing or conversion fails.
+ */
+function local_certificateimport_process_conversion(int $itemid): void {
+    global $DB;
+
+    if (!$item = $DB->get_record('local_certimp_items', ['id' => $itemid])) {
+        return;
+    }
+
+    if (empty($item->sourcefileid)) {
+        throw new moodle_exception('error:sourcefilemissing', 'local_certificateimport', '', $itemid);
+    }
+
+    $fs = get_file_storage();
+    $sourcefile = $fs->get_file_by_id($item->sourcefileid);
+    if (!$sourcefile) {
+        throw new moodle_exception('error:sourcefilemissing', 'local_certificateimport', '', $itemid);
+    }
+
+    $sourcepath = $sourcefile->copy_content_to_temp();
+    $converter = new \local_certificateimport\local\converter();
+    $jpegpath = $converter->convert($sourcepath);
+
+    if (!empty($item->backgroundfileid)) {
+        if ($oldfile = $fs->get_file_by_id($item->backgroundfileid)) {
+            $oldfile->delete();
+        }
+    }
+
+    $jpgname = clean_filename(pathinfo($sourcefile->get_filename(), PATHINFO_FILENAME) . '.jpg');
+    $background = $fs->create_file_from_pathname([
+        'contextid' => $sourcefile->get_contextid(),
+        'component' => 'local_certificateimport',
+        'filearea' => 'backgrounds',
+        'itemid' => $item->id,
+        'filepath' => '/',
+        'filename' => $jpgname,
+    ], $jpegpath);
+
+    $item->backgroundfileid = $background->get_id();
+    $item->status = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED;
+    $item->timeprocessed = time();
+    $item->sourcefileid = null;
+    $DB->update_record('local_certimp_items', $item);
+
+    @unlink($jpegpath);
+    @unlink($sourcepath);
+    $sourcefile->delete();
+}
+
+/**
+ * Marks a conversion failure for the given item.
+ *
+ * @param int $itemid
+ * @return void
+ */
+function local_certificateimport_flag_conversion_error(int $itemid): void {
+    global $DB;
+
+    if (!$item = $DB->get_record('local_certimp_items', ['id' => $itemid])) {
+        return;
+    }
+
+    $item->status = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR;
+    $item->timeprocessed = time();
+    $DB->update_record('local_certimp_items', $item);
 }
 
 /**
@@ -528,6 +640,12 @@ function local_certificateimport_delete_items(array $itemids): array {
             $file = $fs->get_file_by_id($record->backgroundfileid);
             if ($file instanceof \stored_file) {
                 $file->delete();
+            }
+        }
+        if (!empty($record->sourcefileid)) {
+            $source = $fs->get_file_by_id($record->sourcefileid);
+            if ($source instanceof \stored_file) {
+                $source->delete();
             }
         }
 

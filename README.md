@@ -15,10 +15,11 @@
 - 🎯 Pick the destination certificate template from a dropdown instead of memorising template IDs.
 - 🔢 Certificate numbers are generated automatically by the official `tool_certificate` component, so the CSV `code` column can stay empty.
 - 📁 Automatically extracts PDFs, converts them to JPEG backgrounds, and stores the images via the Moodle file API (no original PDFs kept).
+- 🕒 Background conversion runs asynchronously via Moodle cron, so big uploads no longer block the browser while Ghostscript/pdftoppm does the heavy lifting.
 - 🔁 Issues are created via the standard `tool_certificate` API during the “Register certificates” step, so numbering, notifications, and reports stay native.
 - ⏱️ Batches decouple the heavy ZIP import from the registration phase, so you can prepare multiple uploads and trigger issuance when ready.
 - 📊 Built-in report lists every imported certificate with filtering (template/user/status/date), pagination, CSV export, the ability to reissue revoked entries in bulk, delete revoked/not-issued records, and inspect background previews inline.
-- ⚖️ Site admins can cap how many certificates (CSV rows) and how large the ZIP archive may be per import run to protect the server from oversized uploads.
+- ⚖️ Site admins can cap how many certificates (CSV rows) and how large the ZIP archive may be per import run, and even override Ghostscript/pdftoppm paths, to keep the server safe from oversized or misconfigured uploads.
 - 🔐 Respects the dedicated capability `local/certificateimport:import` so you can delegate the task without giving full site admin access.
 
 ---
@@ -41,7 +42,7 @@ PDF conversion depends on the Imagick PHP extension (recommended) or one of the 
    - CSV file: UTF‑8, comma separator, header optional, columns → `userid,filename,timecreated` (the `timecreated` column is optional and may stay blank).
    - ZIP archive: contains every PDF referenced in the CSV `filename` column.
    - Need a sample? Use the **Download CSV template** button on the page.
-3. Click **Import certificates** — the plugin extracts the ZIP, converts PDFs to JPEG files, and queues them for registration.
+3. Click **Import certificates** — the plugin extracts the ZIP, stores PDFs, and queues background conversion jobs that cron will process in the background.
 4. Scroll down to **Import batches** and press **Register certificates** for the desired batch when you want to issue the certificates via `tool_certificate`. The official plugin handles numbering, PDF generation, and notifications at that stage.
 5. Review both the on-page report (you can still **Export CSV**) and the batch table to see which certificates are queued, registered, or failed.
 
