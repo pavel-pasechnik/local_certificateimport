@@ -996,7 +996,14 @@ function local_certificateimport_get_template_options(): array {
     $templates = $DB->get_records('tool_certificate_templates', null, 'name ASC', $fields);
     $options = [];
     foreach ($templates as $template) {
-        $options[$template->id] = format_string($template->name, true, ['contextid' => $template->contextid]);
+        $formatoptions = [];
+        if (!empty($template->contextid)) {
+            $context = \context::instance_by_id($template->contextid, IGNORE_MISSING);
+            if ($context) {
+                $formatoptions['context'] = $context;
+            }
+        }
+        $options[$template->id] = format_string($template->name, true, $formatoptions);
     }
 
     return $options;
