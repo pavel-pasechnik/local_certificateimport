@@ -164,11 +164,16 @@ if ($mform->is_cancelled()) {
         $zip->close();
 
         $results = local_certificateimport_run_import($csvpath, $pdfdir, $template);
+        $invalidlines = local_certificateimport_extract_invalid_user_lines($results);
 
         $summary = (object)[
             'total' => count($results),
         ];
         \core\notification::success(get_string('result:summary:converting', 'local_certificateimport', $summary));
+        if (!empty($invalidlines)) {
+            $linelist = implode(', ', $invalidlines);
+            \core\notification::warning(get_string('error:useridinvalidsummary', 'local_certificateimport', $linelist));
+        }
     } catch (moodle_exception $exception) {
         \core\notification::error($exception->getMessage());
     } catch (Throwable $throwable) {
@@ -177,13 +182,16 @@ if ($mform->is_cancelled()) {
         fulldelete($tempdir);
     }
 } else if (!$converterready && optional_param('submitbutton', null, PARAM_RAW) !== null) {
+    $missinglabels = implode(', ', local_certificateimport_get_missing_converter_labels($converterstatus));
     \core\notification::error(
-        $missingconvertermessage ?: get_string('error:convertersmissing', 'local_certificateimport', implode(', ', local_certificateimport_get_missing_converter_labels($converterstatus)))
+        $missingconvertermessage ?: get_string('error:convertersmissing', 'local_certificateimport', $missinglabels)
     );
 }
 
 if (!empty($results)) {
     $SESSION->local_certificateimport_lastresults = $results;
+} else if (!empty($sessionresults)) {
+    $results = $sessionresults;
 } else {
     unset($SESSION->local_certificateimport_lastresults);
 }

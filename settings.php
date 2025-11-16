@@ -69,9 +69,17 @@ if ($hassiteconfig) {
     ));
 
     $pdftoppmpath = local_certificateimport_find_pdftoppm_path();
-    $pdftoppmstatus = $pdftoppmpath
-        ? \html_writer::span('&#10004; ' . get_string('settings:binary:available', 'local_certificateimport', $pdftoppmpath), 'text-success fw-bold')
-        : \html_writer::span('&#10060; ' . get_string('settings:binary:missing', 'local_certificateimport'), 'text-danger fw-bold');
+    if ($pdftoppmpath) {
+        $pdftoppmstatus = \html_writer::span(
+            '&#10004; ' . get_string('settings:binary:available', 'local_certificateimport', $pdftoppmpath),
+            'text-success fw-bold'
+        );
+    } else {
+        $pdftoppmstatus = \html_writer::span(
+            '&#10060; ' . get_string('settings:binary:missing', 'local_certificateimport'),
+            'text-danger fw-bold'
+        );
+    }
     $pdftoppmdesc = \html_writer::div(
         get_string('settings:pdftoppm_desc', 'local_certificateimport') .
         \html_writer::tag('div', $pdftoppmstatus, ['class' => 'my-2']),
@@ -84,9 +92,17 @@ if ($hassiteconfig) {
     ));
 
     $ghostscriptpath = local_certificateimport_find_ghostscript_path();
-    $ghostscriptstatus = $ghostscriptpath
-        ? \html_writer::span('&#10004; ' . get_string('settings:binary:available', 'local_certificateimport', $ghostscriptpath), 'text-success fw-bold')
-        : \html_writer::span('&#10060; ' . get_string('settings:binary:missing', 'local_certificateimport'), 'text-danger fw-bold');
+    if ($ghostscriptpath) {
+        $ghostscriptstatus = \html_writer::span(
+            '&#10004; ' . get_string('settings:binary:available', 'local_certificateimport', $ghostscriptpath),
+            'text-success fw-bold'
+        );
+    } else {
+        $ghostscriptstatus = \html_writer::span(
+            '&#10060; ' . get_string('settings:binary:missing', 'local_certificateimport'),
+            'text-danger fw-bold'
+        );
+    }
     $ghostscriptdesc = \html_writer::div(
         get_string('settings:ghostscript_desc', 'local_certificateimport') .
         \html_writer::tag('div', $ghostscriptstatus, ['class' => 'my-2']),

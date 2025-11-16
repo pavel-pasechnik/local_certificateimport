@@ -54,10 +54,14 @@ class convert_background_task extends adhoc_task {
         try {
             \local_certificateimport_process_conversion((int)$data->itemid);
         } catch (\moodle_exception $exception) {
-            debugging('local_certificateimport: conversion failed for item ' . $data->itemid . ' - ' . $exception->getMessage(), DEBUG_DEVELOPER);
+            $message = 'local_certificateimport: conversion failed for item ' . $data->itemid .
+                ' - ' . $exception->getMessage();
+            debugging($message, DEBUG_DEVELOPER);
             \local_certificateimport_flag_conversion_error((int)$data->itemid);
         } catch (\Throwable $throwable) {
-            debugging('local_certificateimport: conversion failed for item ' . $data->itemid . ' - ' . $throwable->getMessage(), DEBUG_DEVELOPER);
+            $message = 'local_certificateimport: conversion failed for item ' . $data->itemid .
+                ' - ' . $throwable->getMessage();
+            debugging($message, DEBUG_DEVELOPER);
             \local_certificateimport_flag_conversion_error((int)$data->itemid);
         }
     }

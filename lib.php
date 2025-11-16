@@ -263,22 +263,41 @@ function local_certificateimport_run_import(string $csvpath, string $pdfdir, std
     $userscache = local_certificateimport_preload_users($records);
     $now = time();
 
-    $batch = (object)[
-        'templateid' => $template->id,
-        'createdby' => $USER->id,
-        'status' => LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_PENDING,
-        'totalitems' => count($records),
-        'processeditems' => 0,
-        'timecreated' => $now,
-        'timeupdated' => $now,
-        'timeregistered' => 0,
-    ];
-    $batch->id = $DB->insert_record('local_certimp_batches', $batch);
+    $invalidrecords = [];
+    foreach ($records as $record) {
+        if ($reason = local_certificateimport_detect_userid_issue($record, $userscache)) {
+            $invalidrecords[$record['line']] = $reason;
+        }
+    }
+
+    $validcount = count($records) - count($invalidrecords);
+    $batchid = null;
+
+    if ($validcount > 0) {
+        $batch = (object)[
+            'templateid' => $template->id,
+            'createdby' => $USER->id,
+            'status' => LOCAL_CERTIFICATEIMPORT_BATCH_STATUS_PENDING,
+            'totalitems' => $validcount,
+            'processeditems' => 0,
+            'timecreated' => $now,
+            'timeupdated' => $now,
+            'timeregistered' => 0,
+        ];
+        $batchid = $DB->insert_record('local_certimp_batches', $batch);
+    }
 
     $results = [];
     foreach ($records as $record) {
+        if (isset($invalidrecords[$record['line']])) {
+            $results[] = local_certificateimport_build_invalid_user_result($record, $invalidrecords[$record['line']]);
+            continue;
+        }
+        if ($batchid === null) {
+            continue;
+        }
         $record['templateid'] = $template->id;
-        $results[] = local_certificateimport_stage_record($record, $fileindex, $template, $batch->id, $userscache);
+        $results[] = local_certificateimport_stage_record($record, $fileindex, $template, $batchid, $userscache);
     }
 
     return $results;
@@ -362,6 +381,80 @@ function local_certificateimport_preload_users(array $records): array {
     }
 
     return $DB->get_records_list('user', 'id', $ids);
+}
+
+/**
+ * Detects whether the CSV record references a valid user.
+ *
+ * @param array $record
+ * @param array $userscache
+ * @return string|null Reason code if invalid (useridmissing|useridinvalid).
+ */
+function local_certificateimport_detect_userid_issue(array $record, array $userscache): ?string {
+    $userid = (int)($record['userid'] ?? 0);
+    if ($userid <= 0) {
+        return 'useridmissing';
+    }
+    if (!isset($userscache[$userid])) {
+        return 'useridinvalid';
+    }
+
+    return null;
+}
+
+/**
+ * Builds a result row for an invalid user reference.
+ *
+ * @param array $record
+ * @param string $reason
+ * @return array
+ */
+function local_certificateimport_build_invalid_user_result(array $record, string $reason): array {
+    if ($reason === 'useridmissing') {
+        $message = get_string('error:useridmissing', 'local_certificateimport', $record['line']);
+    } else {
+        $params = (object)[
+            'line' => $record['line'],
+            'userid' => $record['userid'],
+        ];
+        $message = get_string('error:useridinvalid', 'local_certificateimport', $params);
+    }
+
+    return [
+        'line' => $record['line'],
+        'userid' => $record['userid'],
+        'code' => '',
+        'filename' => $record['filename'],
+        'userdisplay' => '',
+        'status' => LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR,
+        'message' => $message,
+        'itemid' => null,
+        'backgroundfileid' => null,
+        'previewurl' => '',
+        'sourcefileid' => null,
+        'errorcode' => $reason,
+    ];
+}
+
+/**
+ * Extracts CSV line numbers with invalid user IDs from an import result list.
+ *
+ * @param array $results
+ * @return array<int>
+ */
+function local_certificateimport_extract_invalid_user_lines(array $results): array {
+    $lines = [];
+    foreach ($results as $row) {
+        $errorcode = $row['errorcode'] ?? null;
+        if ($errorcode === 'useridmissing' || $errorcode === 'useridinvalid') {
+            $lines[] = (int)($row['line'] ?? 0);
+        }
+    }
+
+    $lines = array_unique(array_filter($lines));
+    sort($lines, SORT_NUMERIC);
+
+    return $lines;
 }
 
 /**
