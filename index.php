@@ -179,7 +179,6 @@ if (!empty($results)) {
 $batches = local_certificateimport_get_recent_batches();
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(get_string('pagetitle', 'local_certificateimport'));
 echo html_writer::div(get_string('page:instructions', 'local_certificateimport'), 'alert alert-info');
 
 if (!local_certificateimport_is_available()) {
@@ -203,12 +202,6 @@ $templatelink = html_writer::link($templateurl, get_string('page:csvtemplate', '
 ]);
 echo html_writer::div($templatelink, 'mb-2');
 
-$reporturl = new moodle_url('/local/certificateimport/report.php');
-$reportlink = html_writer::link($reporturl, get_string('report:menu', 'local_certificateimport'), [
-    'class' => 'btn btn-outline-secondary',
-    'role' => 'button',
-]);
-echo html_writer::div($reportlink, 'mb-4');
 $mform->display();
 
 echo $OUTPUT->heading(get_string('report:title', 'local_certificateimport'), 3);

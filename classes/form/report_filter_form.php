@@ -38,7 +38,7 @@ class report_filter_form extends \moodleform {
      */
     public function definition(): void {
         $mform = $this->_form;
-        $mform->setMethod('get');
+        $mform->updateAttributes(['method' => 'get']);
 
         $templateoptions = $this->_customdata['templateoptions'] ?? [];
         $filters = $this->_customdata['filters'] ?? [];

@@ -128,10 +128,12 @@ $string['settings:maxrecords'] = 'Maximum certificates per import';
 $string['settings:maxrecords_desc'] = 'Restrict how many CSV rows can be processed in one run. Set to 0 to disable the limit.';
 $string['settings:maxarchivesize'] = 'Maximum ZIP size (MB)';
 $string['settings:maxarchivesize_desc'] = 'Reject uploads whose ZIP archive exceeds this size (in megabytes). Set to 0 to disable the limit.';
-$string['settings:pdftoppmpath'] = 'pdftoppm path';
-$string['settings:pdftoppmpath_desc'] = 'Absolute path to the pdftoppm binary. Leave empty to auto-detect.';
-$string['settings:ghostscriptpath'] = 'Ghostscript path';
-$string['settings:ghostscriptpath_desc'] = 'Absolute path to the Ghostscript (gs) binary. Leave empty to auto-detect.';
+$string['settings:pdftoppm'] = 'pdftoppm';
+$string['settings:pdftoppm_desc'] = '"pdftoppm" converts PDF pages to PNG/JPEG as fast as Ghostscript and often performs even better on large documents. Install it via poppler-utils/poppler on Linux or through Cygwin on Windows (default path /usr/bin/pdftoppm). If it is present it will be used automatically.';
+$string['settings:ghostscript'] = 'Ghostscript';
+$string['settings:ghostscript_desc'] = 'Ghostscript (gs) is the fallback PDF converter. Install the "ghostscript" package so the plugin can locate /usr/bin/gs (or the platform equivalent).';
+$string['settings:binary:available'] = 'Available ({$a})';
+$string['settings:binary:missing'] = 'Not detected on the server.';
 
 $string['report:issues:title'] = 'Imported certificates';
 $string['report:issues:description'] = 'Browse every certificate queued or issued through the importer, filter by template/status/date, export to CSV, reissue revoked records, delete revoked/not-issued entries, and open background previews.';

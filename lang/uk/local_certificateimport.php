@@ -128,10 +128,12 @@ $string['settings:maxrecords'] = 'Максимум сертифікатів за
 $string['settings:maxrecords_desc'] = 'Обмежує кількість рядків CSV, що обробляються за один запуск. Вкажіть 0, щоб вимкнути обмеження.';
 $string['settings:maxarchivesize'] = 'Максимальний розмір ZIP (МБ)';
 $string['settings:maxarchivesize_desc'] = 'Відхиляти завантаження, якщо розмір ZIP перевищує цей ліміт (у мегабайтах). Вкажіть 0, щоб вимкнути обмеження.';
-$string['settings:pdftoppmpath'] = 'Шлях до pdftoppm';
-$string['settings:pdftoppmpath_desc'] = 'Абсолютний шлях до виконуваного файла pdftoppm. Залиште порожнім для автоматичного визначення.';
-$string['settings:ghostscriptpath'] = 'Шлях до Ghostscript';
-$string['settings:ghostscriptpath_desc'] = 'Абсолютний шлях до виконуваного файла Ghostscript (gs). Залиште порожнім для автоматичного визначення.';
+$string['settings:pdftoppm'] = 'pdftoppm';
+$string['settings:pdftoppm_desc'] = '«pdftoppm» перетворює сторінки PDF у PNG/JPEG так само швидко, як Ghostscript, і зазвичай краще справляється з великими документами. Встановіть пакет poppler-utils/poppler (типовий шлях /usr/bin/pdftoppm) або скористайтеся Cygwin у Windows — якщо програма знайдена, вона використовується автоматично.';
+$string['settings:ghostscript'] = 'Ghostscript';
+$string['settings:ghostscript_desc'] = 'Ghostscript (gs) — резервний конвертер PDF. Встановіть пакет «ghostscript», щоб система знаходила /usr/bin/gs (або еквівалентний шлях на вашій платформі).';
+$string['settings:binary:available'] = 'Доступно ({$a})';
+$string['settings:binary:missing'] = 'Не знайдено на сервері.';
 
 $string['report:issues:title'] = 'Імпортовані сертифікати';
 $string['report:issues:description'] = 'Переглядайте всі сертифікати, імпортовані через плагін, фільтруйте їх за шаблоном/статусом/датою, експортуйте у CSV, перестворюйте відкликані записи, видаляйте відкликані/не випущені та відкривайте превʼю фонів.';

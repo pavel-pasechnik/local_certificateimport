@@ -68,20 +68,34 @@ if ($hassiteconfig) {
         PARAM_INT
     ));
 
-    $settingspage->add(new admin_setting_configtext(
-        'local_certificateimport/pdftoppmpath',
-        get_string('settings:pdftoppmpath', 'local_certificateimport'),
-        get_string('settings:pdftoppmpath_desc', 'local_certificateimport'),
-        '',
-        PARAM_RAW_TRIMMED
+    $pdftoppmpath = local_certificateimport_find_pdftoppm_path();
+    $pdftoppmstatus = $pdftoppmpath
+        ? \html_writer::span('&#10004; ' . get_string('settings:binary:available', 'local_certificateimport', $pdftoppmpath), 'text-success fw-bold')
+        : \html_writer::span('&#10060; ' . get_string('settings:binary:missing', 'local_certificateimport'), 'text-danger fw-bold');
+    $pdftoppmdesc = \html_writer::div(
+        get_string('settings:pdftoppm_desc', 'local_certificateimport') .
+        \html_writer::tag('div', $pdftoppmstatus, ['class' => 'my-2']),
+        'local-certimport-binary-status'
+    );
+    $settingspage->add(new admin_setting_heading(
+        'local_certificateimport_pdftoppm',
+        get_string('settings:pdftoppm', 'local_certificateimport'),
+        $pdftoppmdesc
     ));
 
-    $settingspage->add(new admin_setting_configtext(
-        'local_certificateimport/ghostscriptpath',
-        get_string('settings:ghostscriptpath', 'local_certificateimport'),
-        get_string('settings:ghostscriptpath_desc', 'local_certificateimport'),
-        '',
-        PARAM_RAW_TRIMMED
+    $ghostscriptpath = local_certificateimport_find_ghostscript_path();
+    $ghostscriptstatus = $ghostscriptpath
+        ? \html_writer::span('&#10004; ' . get_string('settings:binary:available', 'local_certificateimport', $ghostscriptpath), 'text-success fw-bold')
+        : \html_writer::span('&#10060; ' . get_string('settings:binary:missing', 'local_certificateimport'), 'text-danger fw-bold');
+    $ghostscriptdesc = \html_writer::div(
+        get_string('settings:ghostscript_desc', 'local_certificateimport') .
+        \html_writer::tag('div', $ghostscriptstatus, ['class' => 'my-2']),
+        'local-certimport-binary-status'
+    );
+    $settingspage->add(new admin_setting_heading(
+        'local_certificateimport_ghostscript',
+        get_string('settings:ghostscript', 'local_certificateimport'),
+        $ghostscriptdesc
     ));
 
     $ADMIN->add($category, $settingspage);

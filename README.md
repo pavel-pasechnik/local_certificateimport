@@ -19,7 +19,7 @@
 - 🔁 Issues are created via the standard `tool_certificate` API during the “Register certificates” step, so numbering, notifications, and reports stay native.
 - ⏱️ Batches decouple the heavy ZIP import from the registration phase, so you can prepare multiple uploads and trigger issuance when ready.
 - 📊 Built-in report lists every imported certificate with filtering (template/user/status/date), pagination, CSV export, the ability to reissue revoked entries in bulk, delete revoked/not-issued records, and inspect background previews inline.
-- ⚖️ Site admins can cap how many certificates (CSV rows) and how large the ZIP archive may be per import run, and even override Ghostscript/pdftoppm paths, to keep the server safe from oversized or misconfigured uploads.
+- ⚖️ Site admins can cap how many certificates (CSV rows) and how large the ZIP archive may be per import run, while the plugin automatically detects Ghostscript/pdftoppm availability to keep the server safe from oversized or misconfigured uploads.
 - 🔐 Respects the dedicated capability `local/certificateimport:import` so you can delegate the task without giving full site admin access.
 
 ---

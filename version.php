@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_certificateimport';
-$plugin->release   = '1.0.16';
-$plugin->version   = 2025111600;
+$plugin->release   = '1.1.1';
+$plugin->version   = 2025112100;
 $plugin->requires  = 2022041900.00;
 $plugin->source = 'https://github.com/pavel-pasechnik/local_certificateimport';
 $plugin->dependencies = [

@@ -65,6 +65,62 @@ if (!defined('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXARCHIVESIZE_MB')) {
 }
 
 /**
+ * Returns the detected pdftoppm binary path or empty string.
+ *
+ * @return string
+ */
+function local_certificateimport_find_pdftoppm_path(): string {
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $paths = ['/usr/bin/pdftoppm', '/usr/local/bin/pdftoppm'];
+    foreach ($paths as $path) {
+        if (is_executable($path)) {
+            return $cached = $path;
+        }
+    }
+
+    $output = [];
+    $code = 0;
+    @exec('command -v pdftoppm', $output, $code);
+    if ($code === 0 && !empty($output[0])) {
+        return $cached = trim($output[0]);
+    }
+
+    return $cached = '';
+}
+
+/**
+ * Returns the detected Ghostscript binary path or empty string.
+ *
+ * @return string
+ */
+function local_certificateimport_find_ghostscript_path(): string {
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $paths = ['/usr/bin/gs', '/usr/local/bin/gs'];
+    foreach ($paths as $path) {
+        if (is_executable($path)) {
+            return $cached = $path;
+        }
+    }
+
+    $output = [];
+    $code = 0;
+    @exec('command -v gs', $output, $code);
+    if ($code === 0 && !empty($output[0])) {
+        return $cached = trim($output[0]);
+    }
+
+    return $cached = '';
+}
+
+/**
  * Returns the maximum allowed number of certificates per import.
  *
  * @return int 0 means unlimited.

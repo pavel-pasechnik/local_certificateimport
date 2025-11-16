@@ -261,26 +261,7 @@ class converter {
      * @return string
      */
     protected function get_pdftoppm_binary(): string {
-        $configured = trim((string)get_config('local_certificateimport', 'pdftoppmpath'));
-        if ($configured !== '' && is_executable($configured)) {
-            return $configured;
-        }
-
-        $paths = ['/usr/bin/pdftoppm', '/usr/local/bin/pdftoppm'];
-        foreach ($paths as $path) {
-            if (is_executable($path)) {
-                return $path;
-            }
-        }
-
-        $output = [];
-        $code = 0;
-        @exec('command -v pdftoppm', $output, $code);
-        if ($code === 0 && !empty($output[0])) {
-            return trim($output[0]);
-        }
-
-        return '';
+        return local_certificateimport_find_pdftoppm_path();
     }
 
     /**
@@ -289,25 +270,6 @@ class converter {
      * @return string
      */
     protected function get_ghostscript_binary(): string {
-        $configured = trim((string)get_config('local_certificateimport', 'ghostscriptpath'));
-        if ($configured !== '' && is_executable($configured)) {
-            return $configured;
-        }
-
-        $paths = ['/usr/bin/gs', '/usr/local/bin/gs'];
-        foreach ($paths as $path) {
-            if (is_executable($path)) {
-                return $path;
-            }
-        }
-
-        $output = [];
-        $code = 0;
-        @exec('command -v gs', $output, $code);
-        if ($code === 0 && !empty($output[0])) {
-            return trim($output[0]);
-        }
-
-        return '';
+        return local_certificateimport_find_ghostscript_path();
     }
 }
