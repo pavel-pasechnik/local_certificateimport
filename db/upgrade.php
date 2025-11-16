@@ -128,14 +128,14 @@ function xmldb_local_certificateimport_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025111600, 'local', 'certificateimport');
     }
 
-    if ($oldversion < 2025112000) {
+    if ($oldversion < 2025111600) {
         $items = new xmldb_table('local_certimp_items');
         $field = new xmldb_field('sourcefileid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'backgroundfileid');
         if (!$dbman->field_exists($items, $field)) {
             $dbman->add_field($items, $field);
         }
 
-        upgrade_plugin_savepoint(true, 2025112000, 'local', 'certificateimport');
+        upgrade_plugin_savepoint(true, 2025111600, 'local', 'certificateimport');
     }
 
     return true;
