@@ -75,9 +75,11 @@ $string['error:zipextract'] = 'Unable to extract files from the ZIP archive.';
 $string['error:batchinprogress'] = 'This batch is already processing or completed.';
 $string['error:batchreadyempty'] = 'There are no queued certificates waiting for registration in this batch.';
 $string['error:backgroundmissing'] = 'Converted background image for "{$a}" is missing.';
-$string['error:convertermissing'] = 'PDF conversion requires Imagick or the ImageMagick CLI (convert). Install one of them on the server.';
+$string['error:convertermissing'] = 'PDF conversion requires Imagick or one of the CLI tools (convert, pdftoppm, gs). Install one of them on the server.';
 $string['error:converterimagick'] = 'Imagick was unable to convert the PDF: {$a}';
 $string['error:convertercli'] = 'ImageMagick CLI could not convert the PDF (exit code {$a}).';
+$string['error:converterpdftoppm'] = 'pdftoppm could not convert the PDF (exit code {$a}).';
+$string['error:convertergs'] = 'Ghostscript could not convert the PDF (exit code {$a}).';
 $string['error:unexpected'] = 'Unexpected error: {$a}';
 
 $string['status:available'] = 'Available';

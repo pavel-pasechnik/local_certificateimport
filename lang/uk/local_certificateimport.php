@@ -75,9 +75,11 @@ $string['error:zipextract'] = 'Не вдалося розпакувати фай
 $string['error:batchinprogress'] = 'Цей пакет вже обробляється або завершений.';
 $string['error:batchreadyempty'] = 'У пакеті немає записів, що очікують реєстрації.';
 $string['error:backgroundmissing'] = 'Не знайдено конвертований фон для «{$a}».';
-$string['error:convertermissing'] = 'Для конвертації PDF потрібен Imagick або утиліта ImageMagick (convert). Встановіть один з варіантів.';
+$string['error:convertermissing'] = 'Для конвертації PDF потрібен Imagick або одна з консольних утиліт (convert, pdftoppm, gs). Встановіть будь-який варіант.';
 $string['error:converterimagick'] = 'Imagick не зміг конвертувати PDF: {$a}';
 $string['error:convertercli'] = 'ImageMagick не зміг конвертувати PDF (код {$a}).';
+$string['error:converterpdftoppm'] = 'pdftoppm не зміг конвертувати PDF (код {$a}).';
+$string['error:convertergs'] = 'Ghostscript не зміг конвертувати PDF (код {$a}).';
 $string['error:unexpected'] = 'Неочікувана помилка: {$a}';
 
 $string['status:available'] = 'Доступний';

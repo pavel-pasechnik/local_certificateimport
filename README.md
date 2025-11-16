@@ -29,7 +29,7 @@
 3. (Optional) Purge caches: `php admin/cli/purge_caches.php`.
 
 The plugin requires Moodle 4.5 (2024041900) or newer and the official `tool_certificate` component.  
-PDF conversion depends on the Imagick PHP extension (recommended) or the ImageMagick CLI tool `convert`.
+PDF conversion depends on the Imagick PHP extension (recommended) or one of the CLI tools `convert`, `pdftoppm`, or `gs` (Ghostscript).
 
 ---
 

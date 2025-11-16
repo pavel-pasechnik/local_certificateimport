@@ -75,9 +75,11 @@ $string['error:zipextract'] = 'Не удалось извлечь файлы и�
 $string['error:batchinprogress'] = 'Этот пакет уже обрабатывается или завершён.';
 $string['error:batchreadyempty'] = 'В пакете нет записей, ожидающих регистрации.';
 $string['error:backgroundmissing'] = 'Не найден сконвертированный фон для «{$a}».';
-$string['error:convertermissing'] = 'Для конвертации PDF необходим Imagick или утилита ImageMagick (convert). Установите один из вариантов.';
+$string['error:convertermissing'] = 'Для конвертации PDF необходим Imagick или одна из консольных утилит (convert, pdftoppm, gs). Установите любой из вариантов.';
 $string['error:converterimagick'] = 'Imagick не смог конвертировать PDF: {$a}';
 $string['error:convertercli'] = 'ImageMagick не смог конвертировать PDF (код {$a}).';
+$string['error:converterpdftoppm'] = 'pdftoppm не смог конвертировать PDF (код {$a}).';
+$string['error:convertergs'] = 'Ghostscript не смог конвертировать PDF (код {$a}).';
 $string['error:unexpected'] = 'Непредвиденная ошибка: {$a}';
 
 $string['status:available'] = 'Доступен';

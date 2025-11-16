@@ -65,6 +65,14 @@ class converter {
             return $this->convert_with_cli($pdfpath);
         }
 
+        if ($this->has_pdftoppm()) {
+            return $this->convert_with_pdftoppm($pdfpath);
+        }
+
+        if ($this->has_ghostscript()) {
+            return $this->convert_with_ghostscript($pdfpath);
+        }
+
         throw new moodle_exception('error:convertermissing', 'local_certificateimport');
     }
 
@@ -126,6 +134,68 @@ class converter {
     }
 
     /**
+     * Uses the pdftoppm CLI utility when available.
+     *
+     * @param string $pdfpath
+     * @return string
+     * @throws moodle_exception
+     */
+    protected function convert_with_pdftoppm(string $pdfpath): string {
+        $target = $this->generate_temp_jpeg();
+        $prefix = preg_replace('/\.jpg$/', '', $target);
+        $command = implode(' ', [
+            escapeshellcmd($this->get_pdftoppm_binary()),
+            '-singlefile',
+            '-jpeg',
+            '-r ' . (int)$this->dpi,
+            '-f 1',
+            '-l 1',
+            escapeshellarg($pdfpath),
+            escapeshellarg($prefix),
+        ]);
+
+        exec($command, $output, $code);
+        if ($code !== 0 || !file_exists($target)) {
+            @unlink($target);
+            throw new moodle_exception('error:converterpdftoppm', 'local_certificateimport', '', $code);
+        }
+
+        return $target;
+    }
+
+    /**
+     * Uses the Ghostscript CLI utility when available.
+     *
+     * @param string $pdfpath
+     * @return string
+     * @throws moodle_exception
+     */
+    protected function convert_with_ghostscript(string $pdfpath): string {
+        $target = $this->generate_temp_jpeg();
+        $command = implode(' ', [
+            escapeshellcmd($this->get_ghostscript_binary()),
+            '-dSAFER',
+            '-dBATCH',
+            '-dNOPAUSE',
+            '-dFirstPage=1',
+            '-dLastPage=1',
+            '-sDEVICE=jpeg',
+            '-dJPEGQ=90',
+            '-r' . (int)$this->dpi,
+            '-sOutputFile=' . escapeshellarg($target),
+            escapeshellarg($pdfpath),
+        ]);
+
+        exec($command, $output, $code);
+        if ($code !== 0 || !file_exists($target)) {
+            @unlink($target);
+            throw new moodle_exception('error:convertergs', 'local_certificateimport', '', $code);
+        }
+
+        return $target;
+    }
+
+    /**
      * Generates a writable temp file path for JPEG output.
      *
      * @return string
@@ -145,6 +215,24 @@ class converter {
     }
 
     /**
+     * Checks whether pdftoppm is available.
+     *
+     * @return bool
+     */
+    protected function has_pdftoppm(): bool {
+        return !empty($this->get_pdftoppm_binary());
+    }
+
+    /**
+     * Checks whether Ghostscript is available.
+     *
+     * @return bool
+     */
+    protected function has_ghostscript(): bool {
+        return !empty($this->get_ghostscript_binary());
+    }
+
+    /**
      * Returns the ImageMagick convert binary path when available.
      *
      * @return string
@@ -160,6 +248,52 @@ class converter {
         $output = [];
         $code = 0;
         @exec('command -v convert', $output, $code);
+        if ($code === 0 && !empty($output[0])) {
+            return trim($output[0]);
+        }
+
+        return '';
+    }
+
+    /**
+     * Returns the pdftoppm binary path when available.
+     *
+     * @return string
+     */
+    protected function get_pdftoppm_binary(): string {
+        $paths = ['/usr/bin/pdftoppm', '/usr/local/bin/pdftoppm'];
+        foreach ($paths as $path) {
+            if (is_executable($path)) {
+                return $path;
+            }
+        }
+
+        $output = [];
+        $code = 0;
+        @exec('command -v pdftoppm', $output, $code);
+        if ($code === 0 && !empty($output[0])) {
+            return trim($output[0]);
+        }
+
+        return '';
+    }
+
+    /**
+     * Returns the Ghostscript binary path when available.
+     *
+     * @return string
+     */
+    protected function get_ghostscript_binary(): string {
+        $paths = ['/usr/bin/gs', '/usr/local/bin/gs'];
+        foreach ($paths as $path) {
+            if (is_executable($path)) {
+                return $path;
+            }
+        }
+
+        $output = [];
+        $code = 0;
+        @exec('command -v gs', $output, $code);
         if ($code === 0 && !empty($output[0])) {
             return trim($output[0]);
         }
