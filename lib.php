@@ -54,6 +54,40 @@ if (!defined('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR')) {
 if (!defined('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_REGISTERED')) {
     define('LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_REGISTERED', 'registered');
 }
+if (!defined('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXRECORDS')) {
+    define('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXRECORDS', 100);
+}
+if (!defined('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXARCHIVESIZE_MB')) {
+    define('LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXARCHIVESIZE_MB', 50);
+}
+
+/**
+ * Returns the maximum allowed number of certificates per import.
+ *
+ * @return int 0 means unlimited.
+ */
+function local_certificateimport_get_max_records(): int {
+    $value = get_config('local_certificateimport', 'maxrecords');
+    if ($value === false || $value === null || $value === '') {
+        $value = LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXRECORDS;
+    }
+
+    return max(0, (int)$value);
+}
+
+/**
+ * Returns the maximum allowed ZIP size in megabytes.
+ *
+ * @return int 0 means unlimited.
+ */
+function local_certificateimport_get_max_archive_size_mb(): int {
+    $value = get_config('local_certificateimport', 'maxarchivesize');
+    if ($value === false || $value === null || $value === '') {
+        $value = LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXARCHIVESIZE_MB;
+    }
+
+    return max(0, (int)$value);
+}
 
 /**
  * Runs the import pipeline for a CSV file and a directory with extracted PDFs.
@@ -110,6 +144,7 @@ function local_certificateimport_parse_csv(string $csvpath): array {
     }
 
     $records = [];
+    $maxrecords = local_certificateimport_get_max_records();
     $line = 0;
     $delimiter = ',';
     $enclosure = '"';
@@ -124,6 +159,11 @@ function local_certificateimport_parse_csv(string $csvpath): array {
         }
         if (count($row) < 2) {
             throw new moodle_exception('error:csvcolumns', 'local_certificateimport', '', $line);
+        }
+
+        if ($maxrecords > 0 && count($records) >= $maxrecords) {
+            fclose($handle);
+            throw new moodle_exception('error:maxrecords', 'local_certificateimport', '', $maxrecords);
         }
 
         $records[] = [
@@ -186,6 +226,9 @@ function local_certificateimport_stage_record(
         'userdisplay' => '',
         'status' => LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR,
         'message' => '',
+        'itemid' => $item->id,
+        'backgroundfileid' => null,
+        'previewurl' => '',
     ];
 
     try {
@@ -234,6 +277,10 @@ function local_certificateimport_stage_record(
 
         $result['status'] = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_QUEUED;
         $result['message'] = get_string('result:message:queued', 'local_certificateimport');
+        $result['backgroundfileid'] = $item->backgroundfileid;
+        if ($previewurl = local_certificateimport_get_background_preview_url($item->backgroundfileid)) {
+            $result['previewurl'] = $previewurl->out(false);
+        }
     } catch (moodle_exception $exception) {
         $item->status = LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_ERROR;
         $DB->update_record('local_certimp_items', $item);
@@ -437,6 +484,197 @@ function local_certificateimport_reissue_items(array $itemids): array {
     }
 
     return $summary;
+}
+
+/**
+ * Deletes staged import items that are revoked or never issued.
+ *
+ * @param array<int> $itemids
+ * @return array{deleted:int, skipped:int}
+ */
+function local_certificateimport_delete_items(array $itemids): array {
+    global $DB;
+
+    if (empty($itemids)) {
+        return ['deleted' => 0, 'skipped' => 0];
+    }
+
+    [$insql, $params] = $DB->get_in_or_equal($itemids, SQL_PARAMS_NAMED);
+    $records = $DB->get_records_sql("
+        SELECT i.*, b.id AS batchid, ti.archived
+          FROM {local_certimp_items} i
+          JOIN {local_certimp_batches} b ON b.id = i.batchid
+     LEFT JOIN {tool_certificate_issues} ti ON ti.id = i.issueid
+         WHERE i.id $insql
+    ", $params);
+
+    if (!$records) {
+        return ['deleted' => 0, 'skipped' => 0];
+    }
+
+    $fs = get_file_storage();
+    $deleted = 0;
+    $skipped = 0;
+    $batchids = [];
+
+    foreach ($records as $record) {
+        $status = local_certificateimport_item_status($record->issueid ?? null, $record->archived ?? null);
+        if (!in_array($status, ['revoked', 'queued', 'missing'], true)) {
+            $skipped++;
+            continue;
+        }
+
+        if (!empty($record->backgroundfileid)) {
+            $file = $fs->get_file_by_id($record->backgroundfileid);
+            if ($file instanceof \stored_file) {
+                $file->delete();
+            }
+        }
+
+        $DB->delete_records('local_certimp_items', ['id' => $record->id]);
+        $deleted++;
+        $batchids[$record->batchid] = true;
+    }
+
+    if (!empty($batchids)) {
+        foreach (array_keys($batchids) as $batchid) {
+            local_certificateimport_refresh_batch_counters((int)$batchid);
+        }
+    }
+
+    return ['deleted' => $deleted, 'skipped' => $skipped];
+}
+
+/**
+ * Refreshes cached counters on a batch after items are removed.
+ *
+ * @param int $batchid
+ * @return void
+ */
+function local_certificateimport_refresh_batch_counters(int $batchid): void {
+    global $DB;
+
+    if (!$batch = $DB->get_record('local_certimp_batches', ['id' => $batchid])) {
+        return;
+    }
+
+    $batch->totalitems = $DB->count_records('local_certimp_items', ['batchid' => $batchid]);
+    $batch->processeditems = $DB->count_records('local_certimp_items', [
+        'batchid' => $batchid,
+        'status' => LOCAL_CERTIFICATEIMPORT_ITEM_STATUS_REGISTERED,
+    ]);
+    $batch->timeupdated = time();
+
+    $DB->update_record('local_certimp_batches', $batch);
+}
+
+/**
+ * Generates a pluginfile URL for a stored background image.
+ *
+ * @param int|null $fileid
+ * @return moodle_url|null
+ */
+function local_certificateimport_get_background_preview_url(?int $fileid): ?moodle_url {
+    if (empty($fileid)) {
+        return null;
+    }
+
+    $fs = get_file_storage();
+    $file = $fs->get_file_by_id($fileid);
+    if (!$file instanceof \stored_file) {
+        return null;
+    }
+
+    return \moodle_url::make_pluginfile_url(
+        $file->get_contextid(),
+        $file->get_component(),
+        $file->get_filearea(),
+        $file->get_itemid(),
+        $file->get_filepath(),
+        $file->get_filename(),
+        false
+    );
+}
+
+/**
+ * Renders a thumbnail link that opens the full preview in a new tab.
+ *
+ * @param string|null $url
+ * @param string $alt
+ * @return string
+ */
+function local_certificateimport_render_thumbnail(?string $url, string $alt): string {
+    if (empty($url)) {
+        return '';
+    }
+    if ($alt === '') {
+        $alt = get_string('preview:alt:generic', 'local_certificateimport');
+    }
+
+    $image = html_writer::empty_tag('img', [
+        'src' => $url,
+        'alt' => $alt,
+        'class' => 'local-certimport-thumb-img',
+    ]);
+
+    return html_writer::link($url, $image, [
+        'class' => 'local-certimport-thumb',
+        'target' => '_blank',
+        'rel' => 'noopener noreferrer',
+    ]);
+}
+
+/**
+ * Serves plugin files (background previews).
+ *
+ * @param stdClass $course
+ * @param cm_info|null $cm
+ * @param context $context
+ * @param string $filearea
+ * @param array $args
+ * @param bool $forcedownload
+ * @param array $options
+ * @return bool
+ */
+function local_certificateimport_pluginfile(
+    stdClass $course,
+    ?\cm_info $cm,
+    \context $context,
+    string $filearea,
+    array $args,
+    bool $forcedownload,
+    array $options = []
+): bool {
+    if ($context->contextlevel !== CONTEXT_SYSTEM) {
+        return false;
+    }
+
+    require_login();
+    require_capability('local/certificateimport:import', $context);
+
+    if ($filearea !== 'backgrounds') {
+        return false;
+    }
+    if (count($args) < 2) {
+        return false;
+    }
+
+    $itemid = (int)array_shift($args);
+    $filename = array_pop($args);
+    $filepath = $args ? '/' . implode('/', $args) . '/' : '/';
+
+    if (!$filename) {
+        return false;
+    }
+
+    $fs = get_file_storage();
+    $file = $fs->get_file($context->id, 'local_certificateimport', 'backgrounds', $itemid, $filepath, $filename);
+    if (!$file instanceof \stored_file) {
+        return false;
+    }
+
+    send_stored_file($file, 0, 0, false, $options);
+    return true;
 }
 
 /**

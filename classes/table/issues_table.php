@@ -55,10 +55,11 @@ class issues_table extends table_sql {
     public function __construct(string $uniqueid, array $filters, moodle_url $baseurl) {
         parent::__construct($uniqueid);
         $this->filters = $filters;
-        $this->define_columns(['select', 'rownum', 'certname', 'user', 'imported', 'issued', 'status', 'code']);
+        $this->define_columns(['select', 'rownum', 'preview', 'certname', 'user', 'imported', 'issued', 'status', 'code']);
         $this->define_headers([
             '',
             get_string('report:col:number', 'local_certificateimport'),
+            get_string('report:col:preview', 'local_certificateimport'),
             get_string('report:col:certificate', 'local_certificateimport'),
             get_string('report:col:user', 'local_certificateimport'),
             get_string('report:col:imported', 'local_certificateimport'),
@@ -76,6 +77,8 @@ class issues_table extends table_sql {
         $namesselect = $userfields->selects ? ', ' . $userfields->selects : '';
 
         $fields = "i.id AS itemid,
+                   i.filename AS originalfilename,
+                   i.backgroundfileid,
                    i.timecreated AS importtime,
                    i.issuetime AS csvissuetime,
                    b.templateid,
@@ -170,11 +173,42 @@ class issues_table extends table_sql {
      * @return string
      */
     public function col_select(stdClass $row): string {
-        if ($this->is_downloading() || $this->get_status_code($row) !== 'revoked') {
+        if ($this->is_downloading()) {
+            return '';
+        }
+
+        $status = $this->get_status_code($row);
+        $selectable = in_array($status, ['revoked', 'queued', 'missing'], true);
+        if (!$selectable) {
             return '';
         }
 
         return html_writer::checkbox('selected[]', $row->itemid, false);
+    }
+
+    /**
+     * Preview column (thumbnail).
+     *
+     * @param stdClass $row
+     * @return string
+     */
+    public function col_preview(stdClass $row): string {
+        if (empty($row->backgroundfileid)) {
+            return '';
+        }
+
+        $url = local_certificateimport_get_background_preview_url((int)$row->backgroundfileid);
+        if (!$url instanceof moodle_url) {
+            return '';
+        }
+
+        if ($this->is_downloading()) {
+            return $url->out(false);
+        }
+
+        $filename = $row->originalfilename ?: get_string('preview:alt:generic', 'local_certificateimport');
+        $alt = get_string('report:preview:alt', 'local_certificateimport', $filename);
+        return local_certificateimport_render_thumbnail($url->out(false), $alt);
     }
 
     /**

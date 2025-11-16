@@ -46,4 +46,27 @@ if ($hassiteconfig) {
         new moodle_url('/local/certificateimport/report.php'),
         'local/certificateimport:import'
     ));
+
+    $settingspage = new admin_settingpage(
+        'local_certificateimport_settings',
+        get_string('settings:heading', 'local_certificateimport')
+    );
+
+    $settingspage->add(new admin_setting_configtext(
+        'local_certificateimport/maxrecords',
+        get_string('settings:maxrecords', 'local_certificateimport'),
+        get_string('settings:maxrecords_desc', 'local_certificateimport'),
+        LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXRECORDS,
+        PARAM_INT
+    ));
+
+    $settingspage->add(new admin_setting_configtext(
+        'local_certificateimport/maxarchivesize',
+        get_string('settings:maxarchivesize', 'local_certificateimport'),
+        get_string('settings:maxarchivesize_desc', 'local_certificateimport'),
+        LOCAL_CERTIFICATEIMPORT_DEFAULT_MAXARCHIVESIZE_MB,
+        PARAM_INT
+    ));
+
+    $ADMIN->add($category, $settingspage);
 }

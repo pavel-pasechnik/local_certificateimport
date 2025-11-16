@@ -132,6 +132,19 @@ if ($mform->is_cancelled()) {
         $csvpath = $tempdir . '/' . $csvfilename;
         $zipfilepath = $tempdir . '/' . $zipfilename;
 
+        $maxarchivesize = local_certificateimport_get_max_archive_size_mb();
+        if ($maxarchivesize > 0) {
+            $limitbytes = $maxarchivesize * 1024 * 1024;
+            if (filesize($zipfilepath) > $limitbytes) {
+                throw new moodle_exception(
+                    'error:maxarchivesize',
+                    'local_certificateimport',
+                    '',
+                    display_size($limitbytes)
+                );
+            }
+        }
+
         $zip = new ZipArchive();
         $zipopen = $zip->open($zipfilepath);
         if ($zipopen !== true) {
@@ -218,6 +231,7 @@ if (!empty($results)) {
     $table = new html_table();
     $table->attributes['class'] = 'generaltable certimport-report';
     $table->head = [
+        get_string('result:table:preview', 'local_certificateimport'),
         get_string('result:table:user', 'local_certificateimport'),
         get_string('result:table:code', 'local_certificateimport'),
         get_string('result:table:status', 'local_certificateimport'),
@@ -230,7 +244,15 @@ if (!empty($results)) {
             $statuscell .= html_writer::tag('div', s($row['message']), ['class' => 'status-message']);
         }
 
+        $previewcell = '-';
+        if (!empty($row['previewurl'])) {
+            $filename = $row['filename'] ?: get_string('preview:alt:generic', 'local_certificateimport');
+            $alt = get_string('result:preview:alt', 'local_certificateimport', $filename);
+            $previewcell = local_certificateimport_render_thumbnail($row['previewurl'], $alt) ?: '-';
+        }
+
         $table->data[] = [
+            $previewcell,
             $row['userdisplay'] ?: get_string('user') . ' #' . $row['userid'],
             s($row['code']),
             $statuscell,

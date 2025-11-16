@@ -17,7 +17,8 @@
 - 📁 Automatically extracts PDFs, converts them to JPEG backgrounds, and stores the images via the Moodle file API (no original PDFs kept).
 - 🔁 Issues are created via the standard `tool_certificate` API during the “Register certificates” step, so numbering, notifications, and reports stay native.
 - ⏱️ Batches decouple the heavy ZIP import from the registration phase, so you can prepare multiple uploads and trigger issuance when ready.
-- 📊 Built-in report lists every imported certificate with filtering (template/user/status/date), pagination, CSV export, and the ability to reissue revoked entries in bulk.
+- 📊 Built-in report lists every imported certificate with filtering (template/user/status/date), pagination, CSV export, the ability to reissue revoked entries in bulk, delete revoked/not-issued records, and inspect background previews inline.
+- ⚖️ Site admins can cap how many certificates (CSV rows) and how large the ZIP archive may be per import run to protect the server from oversized uploads.
 - 🔐 Respects the dedicated capability `local/certificateimport:import` so you can delegate the task without giving full site admin access.
 
 ---

@@ -70,6 +70,24 @@ if ($action === 'reissue' && confirm_sesskey()) {
     redirect(new moodle_url('/local/certificateimport/report.php', $filters));
 }
 
+if ($action === 'delete' && confirm_sesskey()) {
+    if (empty($selected)) {
+        \core\notification::warning(get_string('report:delete:none', 'local_certificateimport'));
+    } else {
+        $summary = local_certificateimport_delete_items($selected);
+        if ($summary['deleted'] > 0) {
+            \core\notification::success(get_string('report:delete:success', 'local_certificateimport', (object)$summary));
+        }
+        if ($summary['skipped'] > 0) {
+            \core\notification::warning(get_string('report:delete:skipped', 'local_certificateimport', (object)$summary));
+        }
+        if ($summary['deleted'] === 0 && $summary['skipped'] === 0) {
+            \core\notification::info(get_string('report:delete:noneeligible', 'local_certificateimport'));
+        }
+    }
+    redirect(new moodle_url('/local/certificateimport/report.php', $filters));
+}
+
 $templateoptions = local_certificateimport_get_template_options();
 $filterform = new \local_certificateimport\form\report_filter_form(null, [
     'templateoptions' => $templateoptions,
@@ -114,14 +132,24 @@ echo html_writer::start_tag('form', [
     'class' => 'local-certimport-bulkform',
 ]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
-echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'reissue']);
 $table->out($perpage, true);
 
-$buttonattributes = [
+$deleteconfirm = addslashes_js(get_string('report:delete:confirm', 'local_certificateimport'));
+echo html_writer::start_div('local-certimport-bulkactions mt-2 d-flex flex-wrap gap-2');
+echo html_writer::tag('button', get_string('report:reissue:selected', 'local_certificateimport'), [
     'type' => 'submit',
-    'class' => 'btn btn-primary mt-2',
-];
-echo html_writer::tag('button', get_string('report:reissue:selected', 'local_certificateimport'), $buttonattributes);
+    'name' => 'action',
+    'value' => 'reissue',
+    'class' => 'btn btn-primary',
+]);
+echo html_writer::tag('button', get_string('report:delete:selected', 'local_certificateimport'), [
+    'type' => 'submit',
+    'name' => 'action',
+    'value' => 'delete',
+    'class' => 'btn btn-danger',
+    'onclick' => "return confirm('{$deleteconfirm}');",
+]);
+echo html_writer::end_div();
 echo html_writer::end_tag('form');
 
 echo $OUTPUT->footer();
