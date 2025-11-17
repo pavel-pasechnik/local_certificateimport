@@ -98,6 +98,8 @@ $string['status:unavailable'] = 'Недоступен';
 $string['status:unavailable:details'] = 'Импорт отключён, пока не будет установлен и включён официальный плагин Certificate (tool_certificate) и его таблицы в базе данных.';
 $string['error:notemplates'] = 'Не найдено ни одного шаблона сертификата. Создайте его в tool_certificate перед импортом.';
 
+$string['error:templateelementmissing'] = 'Выбранный шаблон должен содержать элемент certificateelement_certificat из конструктора сертификатов. Добавьте его перед регистрацией.';
+
 $string['batch:list:title'] = 'Пакеты импорта';
 $string['batch:none'] = 'Очередь импорта пока пуста.';
 $string['batch:table:template'] = 'Шаблон';

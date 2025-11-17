@@ -98,6 +98,8 @@ $string['status:unavailable'] = 'Unavailable';
 $string['status:unavailable:details'] = 'The importer is disabled until the official Certificate tool (tool_certificate) is installed and its database tables are present.';
 $string['error:notemplates'] = 'No certificate templates were found. Create one via tool_certificate before running the import.';
 
+$string['error:templateelementmissing'] = 'The chosen template needs the certificateelement_certificat element. Add it via the certificate designer before registering.';
+
 $string['batch:list:title'] = 'Import batches';
 $string['batch:none'] = 'No staged imports yet.';
 $string['batch:table:template'] = 'Template';
@@ -115,7 +117,6 @@ $string['batch:status:processing'] = 'Processing';
 $string['batch:status:completed'] = 'Completed';
 $string['batch:status:completed_errors'] = 'Completed with errors';
 $string['batch:status:failed'] = 'Failed';
-
 $string['filter:template'] = 'Certificate template';
 $string['filter:template:any'] = 'All templates';
 $string['filter:status'] = 'Status';

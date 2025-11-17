@@ -98,6 +98,8 @@ $string['status:unavailable'] = 'Недоступний';
 $string['status:unavailable:details'] = 'Імпорт вимкнено, доки не буде встановлено та увімкнено офіційний плагін Certificate (tool_certificate) і його таблиці в базі даних.';
 $string['error:notemplates'] = 'Не знайдено жодного шаблону сертифіката. Створіть його в tool_certificate перед імпортом.';
 
+$string['error:templateelementmissing'] = 'Обраний шаблон має містити елемент certificateelement_certificat. Додайте його в конструктор сертифікатів перед реєстрацією.';
+
 $string['batch:list:title'] = 'Пакети імпорту';
 $string['batch:none'] = 'Черга імпорту поки порожня.';
 $string['batch:table:template'] = 'Шаблон';

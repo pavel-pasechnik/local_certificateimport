@@ -660,6 +660,42 @@ function local_certificateimport_flag_conversion_error(int $itemid): void {
 }
 
 /**
+ * Checks whether a template contains the certificateelement_certificat element.
+ *
+ * @param int $templateid
+ * @return bool
+ */
+function local_certificateimport_template_has_certificat_element(int $templateid): bool {
+    global $DB;
+
+    $manager = $DB->get_manager();
+    $table = 'tool_certificate_elements';
+
+    if (!$manager->table_exists($table) || !$manager->field_exists($table, 'templateid')) {
+        return true;
+    }
+
+    $elementfield = null;
+    foreach (['element', 'type', 'name', 'component'] as $field) {
+        if ($manager->field_exists($table, $field)) {
+            $elementfield = $field;
+            break;
+        }
+    }
+
+    if ($elementfield === null) {
+        return true;
+    }
+
+    $conditions = [
+        'templateid' => $templateid,
+        $elementfield => 'certificateelement_certificat',
+    ];
+
+    return $DB->record_exists($table, $conditions);
+}
+
+/**
  * Returns recent import batches with aggregated counters.
  *
  * @param int $limit
@@ -738,6 +774,14 @@ function local_certificateimport_register_batch(int $batchid): array {
     $DB->update_record('local_certimp_batches', $batch);
 
     $template = local_certificateimport_get_template($batch->templateid);
+    if (!local_certificateimport_template_has_certificat_element($template->id)) {
+        throw new moodle_exception(
+            'error:templateelementmissing',
+            'local_certificateimport',
+            '',
+            format_string($template->name, true)
+        );
+    }
     $templateinstance = \tool_certificate\template::instance($template->id);
     $items = $DB->get_records('local_certimp_items', ['batchid' => $batchid], 'id ASC');
     $registrar = new \local_certificateimport\local\registrar($templateinstance);

@@ -43,7 +43,6 @@ $download = optional_param('download', '', PARAM_ALPHA);
 
 $templateoptions = local_certificateimport_get_template_options();
 
-$sessionresults = $SESSION->local_certificateimport_lastresults ?? [];
 if ($action === 'register' && $batchid) {
     require_sesskey();
     if (!local_certificateimport_is_available()) {
