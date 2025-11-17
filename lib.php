@@ -255,10 +255,12 @@ function local_certificateimport_get_max_archive_size_mb(): int {
  * @param stdClass $template Selected certificate template record.
  * @return array<int, array<string, mixed>> Report rows.
  */
-function local_certificateimport_run_import(string $csvpath, string $pdfdir, stdClass $template): array {
+function local_certificateimport_run_import(string $csvpath, string $pdfdir, stdClass $template, ?array $records = null): array {
     global $DB, $USER;
 
-    $records = local_certificateimport_parse_csv($csvpath);
+    if ($records === null) {
+        $records = local_certificateimport_parse_csv($csvpath);
+    }
     $fileindex = local_certificateimport_build_file_index($pdfdir);
     $userscache = local_certificateimport_preload_users($records);
     $now = time();
@@ -1080,6 +1082,31 @@ function local_certificateimport_build_file_index(string $directory): array {
 }
 
 /**
+ * Builds a list of normalized filename candidates used for matching CSV records.
+ *
+ * @param string $filename
+ * @return array<int, string>
+ */
+function local_certificateimport_get_filename_candidates(string $filename): array {
+    $filename = trim($filename);
+    if ($filename === '') {
+        return [];
+    }
+
+    $normalized = core_text::strtolower(str_replace('\\', '/', ltrim($filename, './')));
+    $basename = core_text::strtolower(basename($normalized));
+    $rawbasename = core_text::strtolower(basename($filename));
+
+    $candidates = array_filter([
+        $normalized,
+        $basename,
+        $rawbasename,
+    ], 'strlen');
+
+    return array_values(array_unique($candidates));
+}
+
+/**
  * Locates a PDF file path inside the extracted directory.
  *
  * @param array $index File index produced by local_certificateimport_build_file_index().
@@ -1092,12 +1119,7 @@ function local_certificateimport_locate_pdf(array $index, string $filename): ?st
         return null;
     }
 
-    $normalized = core_text::strtolower(str_replace('\\', '/', ltrim($filename, './')));
-    $candidates = array_filter(array_unique([
-        $normalized,
-        core_text::strtolower(basename($normalized)),
-        core_text::strtolower(basename($filename)),
-    ]));
+    $candidates = local_certificateimport_get_filename_candidates($filename);
 
     foreach ($candidates as $candidate) {
         if (array_key_exists($candidate, $index)) {
@@ -1106,6 +1128,59 @@ function local_certificateimport_locate_pdf(array $index, string $filename): ?st
     }
 
     return null;
+}
+
+/**
+ * Extracts only the ZIP entries that match the provided CSV records.
+ *
+ * @param ZipArchive $zip
+ * @param array<int, array<string, mixed>> $records
+ * @param string $directory
+ * @return void
+ * @throws moodle_exception
+ */
+function local_certificateimport_extract_matching_pdfs(ZipArchive $zip, array $records, string $directory): void {
+    $needed = [];
+    foreach ($records as $record) {
+        foreach (local_certificateimport_get_filename_candidates((string)($record['filename'] ?? '')) as $candidate) {
+            $needed[$candidate] = true;
+        }
+    }
+
+    if (empty($needed)) {
+        return;
+    }
+
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $entryname = $zip->getNameIndex($i);
+        if ($entryname === false) {
+            continue;
+        }
+
+        $entrycandidates = local_certificateimport_get_filename_candidates($entryname);
+        if (empty($entrycandidates)) {
+            continue;
+        }
+
+        $matched = false;
+        foreach ($entrycandidates as $candidate) {
+            if (isset($needed[$candidate])) {
+                $matched = true;
+                break;
+            }
+        }
+        if (!$matched) {
+            continue;
+        }
+
+        if (core_text::strtolower(pathinfo($entryname, PATHINFO_EXTENSION)) !== 'pdf') {
+            continue;
+        }
+
+        if (!$zip->extractTo($directory, $entryname)) {
+            throw new moodle_exception('error:zipextract', 'local_certificateimport');
+        }
+    }
 }
 
 /**

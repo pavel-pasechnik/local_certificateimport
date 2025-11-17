@@ -139,6 +139,7 @@ if ($mform->is_cancelled()) {
         $mform->save_files($tempdir);
         $csvpath = $tempdir . '/' . $csvfilename;
         $zipfilepath = $tempdir . '/' . $zipfilename;
+        $records = local_certificateimport_parse_csv($csvpath);
 
         $maxarchivesize = local_certificateimport_get_max_archive_size_mb();
         if ($maxarchivesize > 0) {
@@ -158,12 +159,10 @@ if ($mform->is_cancelled()) {
         if ($zipopen !== true) {
             throw new moodle_exception('error:zipopen', 'local_certificateimport', '', $zipopen);
         }
-        if (!$zip->extractTo($pdfdir)) {
-            throw new moodle_exception('error:zipextract', 'local_certificateimport');
-        }
+        local_certificateimport_extract_matching_pdfs($zip, $records, $pdfdir);
         $zip->close();
 
-        $results = local_certificateimport_run_import($csvpath, $pdfdir, $template);
+        $results = local_certificateimport_run_import($csvpath, $pdfdir, $template, $records);
         $invalidlines = local_certificateimport_extract_invalid_user_lines($results);
 
         $summary = (object)[
